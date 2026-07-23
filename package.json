@@ -1,0 +1,11 @@
+{
+  "name": "zorka",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Зорька — прогноз клёва, дневник и сообщество рыбаков (РФ/СНГ)",
+  "scripts": {
+    "test": "node test/engine.test.js",
+    "serve": "node tools/serve.js"
+  }
+}
