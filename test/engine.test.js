@@ -4,7 +4,7 @@ import assert from 'node:assert';
 import { computeForecast, analyzeDay, scoreFish, waterTemp } from '../js/score.js';
 import { moonInfo, sunTimes } from '../js/astro.js';
 import { SPECIES } from '../js/data.js';
-import { buildUrl, todayIndex } from '../js/weather.js';
+import { buildUrl, historyUrl, todayIndex } from '../js/weather.js';
 
 const SALAVAT = { lat: 53.36, lon: 55.92 };
 
@@ -43,7 +43,15 @@ function synth() {
 async function getData(){
   try {
     const r = await fetch(buildUrl(SALAVAT.lat, SALAVAT.lon), { signal: AbortSignal.timeout(8000) });
-    if (r.ok) { console.log('  · данные: живой Open-Meteo'); return await r.json(); }
+    if (r.ok) {
+      const data = await r.json();
+      try {
+        const h = await fetch(historyUrl(SALAVAT.lat, SALAVAT.lon), { signal: AbortSignal.timeout(8000) });
+        if (h.ok) { const hj = await h.json(); data.history = { time: hj.daily.time, precip: hj.daily.precipitation_sum, tmax: hj.daily.temperature_2m_max, tmin: hj.daily.temperature_2m_min }; }
+      } catch(e) {}
+      console.log('  · данные: живой Open-Meteo' + (data.history ? ' + история 60 дней' : ''));
+      return data;
+    }
   } catch(e) { /* нет сети */ }
   console.log('  · данные: синтетика (сети нет)');
   return synth();
@@ -72,6 +80,11 @@ check('почасовая: 24 значения 0..5', () => { assert.equal(fc.ho
 check('есть окна клёва', () => assert.ok(Array.isArray(fc.bestWindows)));
 check('ближайшие дни есть', () => assert.ok(fc.upcoming.length>=1));
 check('совет — строка', () => assert.ok(typeof fc.advice==='string' && fc.advice.length>10));
+check('вода: уровень 0..3 + метка + тренд', () => {
+  assert.ok(fc.water.level>=0 && fc.water.level<=3, 'level='+fc.water.level);
+  assert.ok(typeof fc.water.label==='string' && fc.water.label.length>3);
+  assert.ok(['rise','hold','fall'].includes(fc.water.trend));
+});
 check('нерест: майский лещ (спавн) даёт 0', () => {
   const bream = SPECIES.find(f=>f.id==='bream');
   const r = scoreFish(bream, { month:5, wt:18, cloud:false, rain:false, pdir:'stable', wind:210, drop:0, moonAdj:0, turbidity:0, breakBoost:0 });
@@ -82,7 +95,8 @@ console.log('\nСводка на сегодня (' + (data.daily.time[idx]) + ')
 console.log('  День: ' + fc.day.score + '/5 — ' + fc.day.label);
 console.log('  Луна: ' + fc.moon.icon + ' ' + fc.moon.name);
 console.log('  Условия: ' + fc.conditions.maxT + '°/' + fc.conditions.minT + '°, ' +
-  fc.conditions.avgP + ' мм ' + fc.conditions.pdir + ', вода ~' + fc.conditions.wt + '°, мутность ' + fc.turbidity.level);
+  fc.conditions.avgP + ' мм ' + fc.conditions.pdir + ', вода ~' + fc.conditions.wt + '°');
+console.log('  Вода: ' + fc.water.label + ' (заряд ' + fc.water.charge + ', ' + fc.water.dry + ' сухих дн., источник ' + fc.water.source + ')');
 console.log('  Окна клёва: ' + (fc.bestWindows.join(', ') || '—'));
 console.log('  Топ рыбы: ' + fc.fish.slice(0,5).map(f=>f.n+' '+f.sc).join(', '));
 console.log('  Совет: ' + fc.advice);

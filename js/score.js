@@ -18,9 +18,10 @@ const avg = (arr) => arr.reduce((a, b) => a + b, 0) / (arr.length || 1);
 // направление ветра "северо-восточной четверти" (для рыб, чувствительных к С/В)
 function isNE(d) { return (d >= 315 || d <= 45) || (d > 45 && d <= 135); }
 
-// температура воды: сезонная норма + поправка на воздух
-export function waterTemp(maxT, minT, month) {
-  const a = (maxT + minT) / 2;
+// температура воды: сезонная норма + воздух. lagAir (средний воздух за ~10 дней)
+// учитывает тепловую инерцию — вода не следует за одним жарким/холодным днём.
+export function waterTemp(maxT, minT, month, lagAir) {
+  const a = (lagAir != null) ? lagAir : (maxT + minT) / 2;
   const sea = [2, 3, 8, 14, 19, 22, 22, 20, 14];
   const mi = MI[month];
   const base = mi !== undefined ? sea[mi] : a;
@@ -52,13 +53,33 @@ export function analyzeDay(data, i) {
            wcode: D.weathercode[i], precipSum: D.precipitation_sum[i] };
 }
 
-// накопленный дождь за ~3 дня → уровень мутности/подъёма воды 0..3
-export function turbidity(data, todayIdx) {
-  const D = data.daily;
-  let mm = 0;
+// Уровень/мутность воды «с памятью». По 60-дневной истории осадков считаем
+// «заряд» с экспоненциальным затуханием (τ=12 дн): свежий дождь весит больше,
+// но ливни 2–3-недельной давности всё ещё держат воду высокой. Плюс тренд.
+// Если истории нет — резерв на 3-дневном окне.
+export function waterModel(data, todayIdx) {
+  const H = data.history;
+  if (H && H.precip && H.precip.length > 5) {
+    const P = H.precip, n = P.length, ti = n - 1;
+    let charge = 0, recent3 = 0, dry = 0;
+    for (let i = 0; i < n; i++) { const age = ti - i; charge += (P[i] || 0) * Math.exp(-age / 12); if (age <= 2) recent3 += (P[i] || 0); }
+    for (let i = ti; i >= 0; i--) { if ((P[i] || 0) < 1) dry++; else break; }
+    const level = charge < 8 ? 0 : charge < 18 ? 1 : charge < 35 ? 2 : 3;
+    const trend = recent3 >= 8 ? 'rise' : (recent3 < 2 && dry >= 3) ? 'fall' : 'hold';
+    return { level, trend, charge: Math.round(charge), recentMm: Math.round(recent3), dry, label: waterLabel(level, trend), source: 'history' };
+  }
+  const D = data.daily; let mm = 0;
   for (let i = Math.max(0, todayIdx - 2); i <= todayIdx; i++) mm += D.precipitation_sum[i] || 0;
   const level = mm < 3 ? 0 : mm < 12 ? 1 : mm < 28 ? 2 : 3;
-  return { mm: Math.round(mm), level };
+  const trend = mm > 8 ? 'rise' : 'hold';
+  return { level, trend, charge: Math.round(mm), recentMm: Math.round(mm), dry: 0, label: waterLabel(level, trend), source: 'short' };
+}
+
+function waterLabel(level, trend) {
+  const base = ['чистая, норма', 'слегка повышена, лёгкая муть', 'высокая, мутноватая', 'паводок, сильная муть'][level];
+  if (level === 0) return base;
+  const tr = trend === 'rise' ? 'прибывает' : trend === 'fall' ? 'спадает' : 'держится';
+  return base + ' · ' + tr;
 }
 
 // «жор» на сломе погоды: падало давление → стабилизировалось = всплеск
@@ -176,17 +197,23 @@ function activeSpecies(filter, custom) {
 export function computeForecast(data, opts = {}) {
   const { filter = 'all', custom = null, todayIdx = 2 } = opts;
   const today = analyzeDay(data, todayIdx);
+  // температура воды с лагом по многодневной истории воздуха (тепловая инерция)
+  if (data.history && data.history.tmax && data.history.tmax.length > 7) {
+    const H = data.history, n = H.tmax.length; let s = 0, k = 0;
+    for (let i = Math.max(0, n - 10); i < n; i++) { s += ((H.tmax[i] || 0) + (H.tmin[i] || 0)) / 2; k++; }
+    if (k) today.wt = waterTemp(today.maxT, today.minT, today.month, s / k);
+  }
   const yest  = todayIdx > 0 ? analyzeDay(data, todayIdx - 1) : today;
   const drop  = Math.max(0, yest.maxT - today.maxT);
   const moon  = moonInfo(new Date());
   const moonAdj = (moon.sc - 3) * 0.15;
-  const turb  = turbidity(data, todayIdx);
+  const water = waterModel(data, todayIdx);
   const brk   = weatherBreak(data, todayIdx);
 
   const ctx = {
     month: today.month, wt: today.wt, cloud: today.cloud > 40, rain: today.rain,
     pdir: today.pdir, wind: today.avgWD, drop, moonAdj,
-    turbidity: turb.level, breakBoost: brk.boost, breakNote: brk.note,
+    turbidity: water.level, breakBoost: brk.boost, breakNote: brk.note,
   };
 
   const fish = activeSpecies(filter, custom)
@@ -234,14 +261,15 @@ export function computeForecast(data, opts = {}) {
   }
 
   const best = fish.find(f => f.sc >= 3) || fish[0];
-  const advice = best && best.sc >= 2
+  let advice = best && best.sc >= 2
     ? `Лучший вариант — ${best.n.toLowerCase()} (${best.lr[0]}). ${pressureTip(today.pdir)} Вода ~${today.wt}°C.`
     : 'Условия сложные — клёв слабый по большинству видов. Хороший день просто побыть у воды.';
+  if (water.level >= 2) advice += ' Вода мутновата — бери приманки поярче/пошумнее, ищи чистые струи и бровки.';
 
   return {
     day: { score: dayScore, label: dayLabel(dayScore) },
     conditions: today, moon, sun: { srH, ssH },
-    turbidity: turb, weatherBreak: brk,
+    water, weatherBreak: brk,
     fish, hourly, upcoming, advice,
     windows: windowRanges(hourly),
     bestWindows: windowRanges(hourly).map(([a, b]) =>

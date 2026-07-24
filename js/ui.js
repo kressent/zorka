@@ -71,13 +71,6 @@ function noCity(){
 }
 
 // ── ЭКРАН: ПРОГНОЗ ───────────────────────────────────────────────────────────
-function waterState(level, mm){
-  const base = level<=0 ? 'чистая'
-    : level===1 ? 'лёгкая муть'
-    : level===2 ? 'мутная, вода поднялась'
-    : 'сильная муть, паводок';
-  return level>=1 && mm ? `${base} · дожди ${mm} мм` : base;
-}
 function comfortMood(c){
   const temp = c.maxT>=25?'Жарко':c.maxT>=18?'Тепло':c.maxT>=10?'Прохладно':'Холодно';
   const wind = c.wind<=3?'тихо':c.wind<=7?'ветерок':'ветрено';
@@ -129,7 +122,7 @@ function renderForecast(){
         <div class="row"><span class="big">${Math.round(ST.weather.hourly.temperature_2m[idx*24+now.getHours()] ?? c.maxT)}°</span>
           <span class="day">${fc.day.label}<br>${fc.day.score.toFixed(1)} / 5</span></div>
         <div class="sub">${wDesc(c.wcode)} · днём ${c.maxT}°, ночью ${c.minT}° · ${wdName(c.avgWD)} ${c.wind} м/с</div>
-        <div class="sub">🌊 вода ~${c.wt}° · ${waterState(fc.turbidity.level, fc.turbidity.mm)} · давление ${c.avgP} мм ${pdirTxt(c.pdir)}</div>
+        <div class="sub">🌊 вода ~${c.wt}° · ${fc.water.label} · давление ${c.avgP} мм ${pdirTxt(c.pdir)}</div>
         <div class="mood">${comfortMood(c)}</div></div>
     </div>
     <svg class="wave" viewBox="0 0 340 22" preserveAspectRatio="none"><path d="M0,12 C60,3 110,20 170,12 C230,4 280,20 340,10 L340,0 L0,0 Z" fill="#EFE9DB"/></svg>
