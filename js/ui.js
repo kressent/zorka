@@ -9,6 +9,7 @@ import { CITIES, searchCities, nearestCity, geolocate,
          getPlaces, addPlace, removePlace } from './locations.js';
 import * as Diary from './diary.js';
 import * as Tackle from './tackle.js';
+import { makeCatchCard, shareCard } from './catchcard.js';
 
 // ── помощники ────────────────────────────────────────────────────────────────
 const $ = (id) => document.getElementById(id);
@@ -170,7 +171,10 @@ function renderDiary(){
       ${cnt?`<div class="catchlist">${catches}<div class="cl tot"><span class="cn">Итого · ${cnt} ${cnt===1?'рыба':'рыб'}</span><span class="cw">${w?w.toFixed(2)+' кг':'—'}</span></div></div>`
            :(e.visited?`<div style="font-size:12.5px;color:var(--slate);margin-top:8px">Был на рыбалке, без улова</div>`:'')}
       ${e.note?`<div class="en">«${esc(e.note)}»</div>`:''}
-      <button class="act" style="margin-top:10px;padding:8px" onclick="Z.editEntry('${e.id}')">Изменить</button>
+      <div style="display:flex;gap:8px;margin-top:11px">
+        ${(e.catches&&e.catches.length)?`<button class="act" style="flex:1;margin-top:0;padding:9px;border-color:var(--jade);color:var(--jade)" onclick="Z.shareCatch('${e.id}')">📤 Поделиться</button>`:''}
+        <button class="act" style="flex:1;margin-top:0;padding:9px" onclick="Z.editEntry('${e.id}')">Изменить</button>
+      </div>
     </div>`;
   }).join('') : `<div class="empty"><div class="ei">📖</div><p>Пока пусто. Запиши первую рыбалку — со временем это станет твоей летописью и будет уточнять прогноз.</p></div>`;
 
@@ -309,11 +313,18 @@ function saveEntry(){
   // приложить снимок погоды, если есть
   if(ST.weather && !draft.forecast){
     try{ const idx=todayIndex(ST.weather); const fc=computeForecast(ST.weather,{filter:'all',todayIdx:idx});
-      draft.forecast={maxT:fc.conditions.maxT,minT:fc.conditions.minT,avgP:fc.conditions.avgP,pdir:fc.conditions.pdir,wt:fc.conditions.wt}; }catch(e){}
+      draft.forecast={maxT:fc.conditions.maxT,minT:fc.conditions.minT,avgP:fc.conditions.avgP,pdir:fc.conditions.pdir,wt:fc.conditions.wt,score:fc.day.score}; }catch(e){}
   }
   Diary.upsertEntry(draft); draft=null; closeModal(); rerender();
 }
 function delEntry(id){ if(confirm('Удалить запись?')){ Diary.deleteEntry(id); draft=null; closeModal(); rerender(); } }
+async function shareCatch(id){
+  const e = Diary.getEntries().find(x => x.id === id); if (!e) return;
+  try {
+    const blob = await makeCatchCard(e, ST.city ? ST.city.name : '');
+    if (blob) await shareCard(blob, 'ulov-zorka.png');
+  } catch (err) { alert('Не удалось создать карточку: ' + (err && err.message || err)); }
+}
 
 // снасти — комплект
 let kitDraft = null;
@@ -380,7 +391,7 @@ export function initUI(){
     filter:(f)=>{ ST.filter=f; saveSettings(); rerender(); },
     tf:(el)=>el.classList.toggle('open'),
     openCity, searchCity, pickCity, geo, closeModal,
-    newEntry, editEntry, addCatch, rmCatch, setW, setRating, saveEntry, delEntry,
+    newEntry, editEntry, addCatch, rmCatch, setW, setRating, saveEntry, delEntry, shareCatch,
     newKit, editKit, kitIcon, kitTarget, addLure, lureQty, rmLure, saveKit, delKit,
     mapView:(v)=>{ ST.mapView=v; rerender(); }, newPlace, placeGeo, savePlace, delPlace,
   };
