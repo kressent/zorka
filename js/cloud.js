@@ -157,13 +157,14 @@ function genHandle() {
 }
 
 // создать профиль с ником, если его ещё нет; вернуть актуальный ник
+// (таблица profiles из schema.sql: PK = id → auth.users, ник в поле nickname)
 export async function ensureProfile(defaultHandle) {
   const c = await client(); if (!c) return null;
   const u = await currentUser(); if (!u) return null;
-  const { data } = await c.from('profiles').select('handle').eq('user_id', u.id).maybeSingle();
-  if (data && data.handle) return data.handle;
+  const { data } = await c.from('profiles').select('nickname').eq('id', u.id).maybeSingle();
+  if (data && data.nickname) return data.nickname;
   const handle = String(defaultHandle || genHandle()).slice(0, 24);
-  await c.from('profiles').insert({ user_id: u.id, handle }).then(() => {}, () => {});
+  await c.from('profiles').upsert({ id: u.id, nickname: handle }).then(() => {}, () => {});
   return handle;
 }
 
@@ -172,7 +173,7 @@ export async function setHandle(handle) {
   const u = await currentUser(); if (!u) throw new Error('Войди в аккаунт');
   handle = String(handle).trim().slice(0, 24);
   if (handle.length < 2) throw new Error('Имя слишком короткое');
-  const { error } = await c.from('profiles').upsert({ user_id: u.id, handle });
+  const { error } = await c.from('profiles').upsert({ id: u.id, nickname: handle });
   if (error) throw error;
   return handle;
 }
