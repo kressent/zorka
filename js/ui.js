@@ -1,7 +1,7 @@
 'use strict';
 // ═══ ИНТЕРФЕЙС ═══════════════════════════════════════════════════════════════
 import { ST, saveSettings, uid } from './state.js';
-import { SPECIES, byId } from './data.js';
+import { SPECIES, byId, isTrophy } from './data.js';
 import { computeForecast } from './score.js';
 import { fetchWeather, todayIndex } from './weather.js';
 import { moonInfo } from './astro.js';
@@ -323,8 +323,8 @@ function feedCard(it, mine, myId){
   const d=it.caught_at?new Date(it.caught_at):null;
   const dl=d?`${d.getDate()} ${MONTHS_GEN[d.getMonth()]}`:'';
   const fish=(it.fish||[]).filter(x=>x&&x.species);
-  const rows=fish.map(x=>{ const f=byId(x.species); const nm=f?f.n:esc(x.species); const col=f?f.col:'#7c8a80'; const wv=fmtW(x.weight);
-    return `<div class="tc-fish"><span class="dot" style="background:${col}"></span><span class="tc-fn">${nm}</span><span class="tc-fw">${wv||'—'}</span></div>`; }).join('');
+  const rows=fish.map(x=>{ const f=byId(x.species); const nm=f?f.n:esc(x.species); const col=f?f.col:'#7c8a80'; const wv=fmtW(x.weight); const tr=isTrophy(x.species,x.weight)?' 🏆':'';
+    return `<div class="tc-fish"><span class="dot" style="background:${col}"></span><span class="tc-fn">${nm}${tr}</span><span class="tc-fw">${wv||'—'}</span></div>`; }).join('');
   const sc=it.forecast_score!=null?`<span class="feed-badge">прогноз был ${Number(it.forecast_score).toFixed(1)}/5 ✅</span>`:'';
   const rk=anglerRank(it.points);
   const who=`<div class="fc-who"><span class="fc-name">${esc(it.handle||'Рыбак')}</span>${rankFish(rk.n)}<span class="fc-title">${rk.t}</span></div>`;
@@ -348,13 +348,14 @@ function leaderboardHTML(top){
   const win=top[0]; const wh=tripHeaviest(win);
   const wfn=wh?(byId(wh.species)?byId(wh.species).n:esc(wh.species)):'Улов';
   const wfw=wh?fmtW(wh.weight):'';
+  const wtr=wh&&isTrophy(wh.species,wh.weight)?' 🏆':'';
   const rows=top.slice(1).map((t,i)=>{ const h=tripHeaviest(t); const nm=h?(byId(h.species)?byId(h.species).n:esc(h.species)):'—'; const w=h?fmtW(h.weight):'';
     return `<div class="lb-row"><span class="lb-pos">${i+2}</span><span class="lb-who">${esc(t.handle||'Рыбак')}</span><span class="lb-fish">${nm}${w?' · '+w:''}</span><span class="lb-likes">❤ ${t.likes||0}</span></div>`; }).join('');
   return `<div class="lb">
     <div class="lb-head">🏆 Улов недели</div>
     <div class="lb-win">
       <div class="lb-win-name">${esc(win.handle||'Рыбак')}</div>
-      <div class="lb-win-fish">${wfn}${wfw?` · <b>${wfw}</b>`:''}</div>
+      <div class="lb-win-fish">${wfn}${wfw?` · <b>${wfw}</b>`:''}${wtr}</div>
       <div class="lb-win-sub">${win.water_name?esc(win.water_name)+' · ':''}❤ ${win.likes||0}${win.comments?' · 💬 '+win.comments:''}</div>
     </div>
     ${rows?`<div class="lb-list">${rows}</div>`:''}

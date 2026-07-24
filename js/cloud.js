@@ -4,6 +4,7 @@
 // Приложение полностью работает и без входа — облако это надстройка.
 // supabase-js подгружается лениво с CDN только когда реально нужен (онлайн).
 import { CONFIG, cloudEnabled } from './config.js';
+import { isTrophy } from './data.js';
 
 let _client = null, _loading = null;
 
@@ -118,6 +119,7 @@ export async function publishCatches(entry, waterName, coords) {
     trip_id: entry.id,                 // метка выезда (одна рыбалка = одна карточка)
     species: x.species,
     weight: (x.weight ?? null),
+    trophy: isTrophy(x.species, x.weight),
     caught_at: caughtAt,
     water_name: place,
     lat: (coords && coords.lat) || null,

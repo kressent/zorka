@@ -1,6 +1,7 @@
-// Тест логики «Улов недели» (чистые функции, без сети/браузера).
+// Тест логики «Улов недели» и трофея (чистые функции, без сети/браузера).
 import assert from 'node:assert';
 import { weekTop, tripMaxWeight, tripHeaviest } from '../js/leaderboard.js';
+import { isTrophy } from '../js/data.js';
 
 let pass = 0, fail = 0;
 const check = (name, fn) => { try { fn(); console.log('  ✓ ' + name); pass++; }
@@ -46,6 +47,15 @@ check('weekTop — сортирует: лайки → вес → свежест�
 check('weekTop — пустой ввод не падает', () => {
   assert.deepEqual(weekTop([], NOW), []);
   assert.deepEqual(weekTop(null, NOW), []);
+});
+
+check('isTrophy — по порогу вида (граммы)', () => {
+  assert.equal(isTrophy('pike', 5000), true);   // порог щуки 5000
+  assert.equal(isTrophy('pike', 4999), false);
+  assert.equal(isTrophy('perch', 700), true);   // порог окуня 600
+  assert.equal(isTrophy('perch', 300), false);
+  assert.equal(isTrophy('perch', null), false); // без веса — не трофей
+  assert.equal(isTrophy('unknown', 99999), false);
 });
 
 console.log('\nИтог: ' + pass + ' ✓, ' + fail + ' ✗\n');
