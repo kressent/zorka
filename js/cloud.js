@@ -262,6 +262,31 @@ export async function deleteComment(id) {
   if (error) throw error;
 }
 
+// ── пуш на телефон (Web Push). Работает, когда владелец настроит VAPID+отправку ──
+export function pushConfigured() { return !!(CONFIG.VAPID_PUBLIC && CONFIG.VAPID_PUBLIC.length > 20); }
+
+function urlB64ToUint8(b64) {
+  const pad = '='.repeat((4 - (b64.length % 4)) % 4);
+  const s = (b64 + pad).replace(/-/g, '+').replace(/_/g, '/');
+  const raw = atob(s);
+  return Uint8Array.from([...raw].map(ch => ch.charCodeAt(0)));
+}
+
+export async function enablePush() {
+  if (!pushConfigured()) throw new Error('Пуши ещё не настроены владельцем приложения.');
+  if (!('serviceWorker' in navigator) || !('PushManager' in window)) throw new Error('Браузер не поддерживает пуши.');
+  const perm = await Notification.requestPermission();
+  if (perm !== 'granted') throw new Error('Уведомления не разрешены.');
+  const reg = await navigator.serviceWorker.ready;
+  const sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: urlB64ToUint8(CONFIG.VAPID_PUBLIC) });
+  const c = await client(); const u = await currentUser(); if (!c || !u) throw new Error('Войди в аккаунт');
+  const j = sub.toJSON();
+  const { error } = await c.from('push_subscriptions').upsert(
+    { user_id: u.id, endpoint: j.endpoint, p256dh: j.keys.p256dh, auth: j.keys.auth }, { onConflict: 'endpoint' });
+  if (error) throw error;
+  return true;
+}
+
 export async function signOut() {
   try { const c = await client(); if (c) await c.auth.signOut(); } catch (e) {}
 }

@@ -497,6 +497,7 @@ async function openAccount(){
         <div class="field" style="margin-top:10px"><label>Сменить пароль (для входа на других устройствах)</label>
           <input id="ac_setpass" type="password" autocomplete="new-password" placeholder="новый пароль, минимум 6"></div>
         <button class="act" onclick="Z.setPass()">Сохранить пароль</button>
+        ${Cloud.pushConfigured()?`<button class="act" style="border-color:var(--jade);color:var(--jade);margin-top:12px" onclick="Z.enablePush()">🔔 Пуш-уведомления на телефон</button>`:''}
         <button class="act" style="border-color:var(--jade);color:var(--jade);margin-top:12px" onclick="Z.syncNow()">🔄 Синхронизировать сейчас</button>
         <button class="act" style="border-color:var(--bad);color:var(--bad);margin-top:10px" onclick="Z.signOut()">Выйти</button>
       </details>`;
@@ -530,6 +531,10 @@ async function acSetPass(){
 async function acSignOut(){ await Cloud.signOut(); closeModal(); toast('Вышли из облака'); rerender(); }
 async function acSyncNow(){
   try{ toast('Синхронизирую…'); await Sync.syncNow(); closeModal(); toast('Синхронизировано ☁️'); rerender(); }
+  catch(e){ alert('Не удалось: '+(e.message||e)); }
+}
+async function acEnablePush(){
+  try{ await Cloud.enablePush(); toast('Пуш включён — будем присылать на телефон 📲'); }
   catch(e){ alert('Не удалось: '+(e.message||e)); }
 }
 async function acSaveHandle(){
@@ -729,7 +734,7 @@ export function initUI(){
     filter:(f)=>{ ST.filter=f; saveSettings(); rerender(); },
     tf:(el)=>el.classList.toggle('open'),
     openCity, searchCity, pickCity, geo, closeModal, openNotif,
-    openAccount, signIn: acSignIn, setPass: acSetPass, signOut: acSignOut, syncNow: acSyncNow, saveHandle: acSaveHandle,
+    openAccount, signIn: acSignIn, setPass: acSetPass, signOut: acSignOut, syncNow: acSyncNow, saveHandle: acSaveHandle, enablePush: acEnablePush,
     like: feedLike, comments: openComments, sendComment, delComment,
     newEntry, editEntry, addCatch, rmCatch, setW, setLure, lureCustom, setRating, saveEntry, delEntry, shareCatch,
     newKit, editKit, kitIcon, kitTarget, addLure, lureQty, rmLure, saveKit, delKit,
