@@ -473,14 +473,15 @@ async function openAccount(){
     await Cloud.ensureProfile().catch(()=>{});
     const st = await Cloud.myStats().catch(()=>null);
     const handle = (st&&st.handle)||'';
-    const rk = anglerRank(st?st.points:0);
-    const nextR = RANKS.find(r=>r.min>(st?st.points:0));
-    const toNext = nextR ? `до «${nextR.t}» — ${nextR.min-(st?st.points:0)} очков уважения` : 'высший ранг 🏆';
+    const pts = (st&&st.points)||0;
+    const rk = anglerRank(pts);
+    const nextR = RANKS.find(r=>r.min>pts);
+    const toNext = nextR ? `до «${nextR.t}» — ${nextR.min-pts} очков уважения` : 'высший ранг 🏆';
     s.innerHTML = `<button class="close" onclick="Z.closeModal()">✕</button>
       <div class="prof-head">
         <div class="prof-fish">${rankFish(rk.n)}</div>
         <div class="prof-name">${esc(handle||'Рыбак')}</div>
-        <div class="prof-title">${rk.t} · ${st?st.points:0} очков уважения</div>
+        <div class="prof-title">${rk.t} · ${pts} очков уважения</div>
         <div class="prof-next">${toNext}</div>
       </div>
       <p class="prof-hint">Очки уважения растут от лайков других рыбаков и медленно тускнеют без рыбалки. Накрутить количеством рыбы нельзя.</p>
