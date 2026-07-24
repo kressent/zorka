@@ -330,7 +330,7 @@ function feedCard(it, mine, myId){
   const head=`<div class="tc-head">${place?`<b>${place}</b>`:''}${(place&&dl)?'<span class="tc-dot">·</span>':''}${dl?`<span>${dl}</span>`:''}</div>`;
   const isMine = myId && it.user_id===myId;
   const like = isMine
-    ? `<span class="tc-own">твой улов</span>`
+    ? `<div class="tc-own">❤ <span class="lc">${it.likes||0}</span> · твой улов</div>`
     : `<button class="like-btn${mine?' on':''}" onclick="Z.like('${it.id}',this)">❤ <span class="lc">${it.likes||0}</span></button>`;
   return `<div class="feed-card">
     ${who}
@@ -379,9 +379,8 @@ async function openAccount(){
         <div class="prof-next">${toNext}</div>
       </div>
       <p class="prof-hint">Очки уважения растут от лайков других рыбаков и медленно тускнеют без рыбалки. Накрутить количеством рыбы нельзя.</p>
-      <div class="prof-stats">
+      <div class="prof-stats prof-stats-3">
         <div><b>${st?st.catches||0:0}</b><span>уловов</span></div>
-        <div><b>${st?st.likes||0:0}</b><span>лайков</span></div>
         <div><b>${st?st.species||0:0}</b><span>видов</span></div>
         <div><b>${st?st.days||0:0}</b><span>дней</span></div>
       </div>

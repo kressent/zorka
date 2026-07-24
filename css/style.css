@@ -301,6 +301,7 @@ button{font-family:inherit}
 .prof-next{font-size:11.5px;color:var(--slate);margin-top:5px}
 .prof-hint{font-size:11.5px;color:var(--slate);line-height:1.45;margin-top:10px;font-style:italic;font-family:var(--font-serif);text-align:center}
 .prof-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--rule);border:1px solid var(--rule);margin-top:14px}
+.prof-stats.prof-stats-3{grid-template-columns:repeat(3,1fr)}
 .prof-stats>div{background:var(--paper);padding:10px 4px;text-align:center}
 .prof-stats b{font-family:var(--font-serif);font-size:20px;font-weight:700;font-variant-numeric:tabular-nums;display:block}
 .prof-stats span{font-family:var(--font-mono);font-size:8.5px;letter-spacing:.05em;text-transform:uppercase;color:var(--slate)}
