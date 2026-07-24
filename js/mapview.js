@@ -32,6 +32,7 @@ export async function initMap(elId, center, places, onPick, layer) {
     if (!document.getElementById(elId)) return;           // экран уже сменили
     if (_map) { try { _map.remove(); } catch (e) {} _map = null; }
     _map = L.map(el, { zoomControl: true }).setView([center.lat, center.lon], 12);
+    if (_map.attributionControl) _map.attributionControl.setPrefix(false); // убрать «Leaflet 🇺🇦»
     _base.osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
       { maxZoom: 19, attribution: '© OpenStreetMap' });
     _base.sat = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
