@@ -3,7 +3,7 @@
 // Стратегия: оболочку приложения кэшируем (offline-first), погоду (Open-Meteo)
 // не кэшируем на уровне SW — у приложения свой кэш в localStorage на 3 часа.
 
-const VERSION = 'zorka-v15';
+const VERSION = 'zorka-v16';
 const SHELL = [
   './',
   './index.html',
@@ -50,9 +50,10 @@ self.addEventListener('fetch', (e) => {
   // сторонние запросы (Open-Meteo и пр.) — только сеть, без кэша SW
   if (url.origin !== location.origin) return;
 
-  // оболочка: сеть в первую очередь (свежий код), кэш — как офлайн-резерв
+  // оболочка: сеть в первую очередь + обход HTTP-кэша (всегда свежий код),
+  // кэш — как офлайн-резерв
   e.respondWith(
-    fetch(req).then(res => {
+    fetch(req, { cache: 'reload' }).then(res => {
       const copy = res.clone();
       caches.open(VERSION).then(c => c.put(req, copy)).catch(() => {});
       return res;
