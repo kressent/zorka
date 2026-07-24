@@ -2,9 +2,13 @@
 -- Запусти в Supabase → SQL Editor после 003. Включает публичную ленту уловов
 -- (координаты уже огрубляются триггером fuzz_coords из schema.sql) и лайки.
 
--- дедуп: чтобы повторная публикация той же записи не плодила строки
+-- дедуп: чтобы повторная публикация той же записи не плодила строки.
+-- Нужно именно ограничение (constraint), а не частичный индекс — иначе upsert
+-- (ON CONFLICT user_id,client_id) не работает.
 alter table catches add column if not exists client_id text;
-create unique index if not exists catches_user_client on catches(user_id, client_id) where client_id is not null;
+drop index if exists catches_user_client;
+alter table catches drop constraint if exists catches_user_client_uk;
+alter table catches add constraint catches_user_client_uk unique (user_id, client_id);
 
 -- лайки уловов
 create table if not exists catch_likes (
