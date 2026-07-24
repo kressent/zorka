@@ -518,7 +518,7 @@ async function acSignIn(){
   if(!authEmail || !authEmail.includes('@')){ alert('Введи корректную почту'); return; }
   if(!pass || pass.length<6){ alert('Пароль — минимум 6 символов'); return; }
   const s=document.querySelector('#modal .sheet'); const btn=s&&s.querySelector('.act'); if(btn) btn.textContent='Вхожу…';
-  try{ await Cloud.signInOrUp(authEmail, pass); closeModal(); toast('Вход выполнен — облако подключено ☁️'); Cloud.ensureProfile().catch(()=>{}); rerender(); Sync.syncOnLogin(); }
+  try{ await Cloud.signInOrUp(authEmail, pass); closeModal(); toast('Вход выполнен — облако подключено ☁️'); Cloud.ensureProfile().catch(()=>{}); Cloud.subscribeCommunity(onCommunityChange).catch(()=>{}); setTimeout(checkEngagement,1500); rerender(); Sync.syncOnLogin(); }
   catch(e){ alert(e.message||String(e)); if(btn) btn.textContent='Войти'; }
 }
 async function acSetPass(){
@@ -615,7 +615,8 @@ function renderEntry(){
 function addCatch(species){ draft.catches.push({species, weight:null}); syncEntryFields(); renderEntry(); }
 function rmCatch(i){ draft.catches.splice(i,1); syncEntryFields(); renderEntry(); }
 function setW(i,v){ draft.catches[i].weight = v===''?null:(Math.round(parseFloat(v))||null); }
-function escJs(s){ return String(s).replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/\r?\n/g,' '); }
+// безопасно для одинарной JS-строки ВНУТРИ двойного HTML-атрибута onclick
+function escJs(s){ return String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/\r?\n/g,' '); }
 function lureCandidates(species){
   const f=byId(species); const out=[];
   try{ Tackle.getKits().forEach(k=>(k.lures||[]).forEach(l=>{ if(l&&l.name) out.push(l.name); })); }catch(e){}
