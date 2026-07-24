@@ -103,7 +103,10 @@ export async function pushData(obj) {
 // ── сообщество: публикация уловов, лента, лайки ──
 export async function publishCatches(entry, waterName, coords) {
   const c = await client(); if (!c) return; const u = await currentUser(); if (!u) return;
-  const cats = (entry.catches || []); if (!cats.length) return;
+  // всегда сперва убираем прошлые строки этой записи — так правки и удаления
+  // улова синхронизируются с лентой (даже если рыбу из записи убрали совсем)
+  await c.from('catches').delete().eq('user_id', u.id).like('client_id', entry.id + ':%');
+  const cats = (entry.catches || []); if (!cats.length) return; // улова нет — просто убрали старое
   const caughtAt = entry.date ? new Date(entry.date + 'T12:00:00').toISOString() : new Date().toISOString();
   const rows = cats.map((x, i) => ({
     user_id: u.id,
@@ -118,10 +121,14 @@ export async function publishCatches(entry, waterName, coords) {
     forecast_score: (entry.forecast && entry.forecast.score != null) ? entry.forecast.score : null,
     is_public: true,
   }));
-  // удаляем прошлые строки этой записи, затем вставляем свежие
-  // (без зависимости от уникального ограничения / миграции 005)
-  await c.from('catches').delete().eq('user_id', u.id).like('client_id', entry.id + ':%');
   const { error } = await c.from('catches').insert(rows);
+  if (error) throw error;
+}
+
+// убрать из ленты все уловы удалённой записи дневника
+export async function unpublishEntry(entryId) {
+  const c = await client(); if (!c) return; const u = await currentUser(); if (!u) return;
+  const { error } = await c.from('catches').delete().eq('user_id', u.id).like('client_id', entryId + ':%');
   if (error) throw error;
 }
 

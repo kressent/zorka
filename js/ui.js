@@ -505,13 +505,16 @@ function saveEntry(){
   }
   const saved = draft;
   Diary.upsertEntry(saved); draft=null; closeModal(); rerender(); Sync.pushSoon();
-  if(cloudEnabled() && Cloud.cachedUser() && (saved.catches||[]).length){
+  // всегда синхронизируем ленту: и добавление, и правка, и убранная рыба
+  if(cloudEnabled() && Cloud.cachedUser()){
     Cloud.publishCatches(saved, ST.city?ST.city.name:'', ST.city?{lat:ST.city.lat,lon:ST.city.lon}:{})
-      .then(()=>toast('Улов добавлен в ленту 🎣'))
+      .then(()=>{ if((saved.catches||[]).length) toast('Улов в ленте 🎣'); })
       .catch(e=>{ console.warn('publish:',e); toast('Лента не приняла: '+(e.message||e)); });
   }
 }
-function delEntry(id){ if(confirm('Удалить запись?')){ Diary.deleteEntry(id); draft=null; closeModal(); rerender(); Sync.pushSoon(); } }
+function delEntry(id){ if(confirm('Удалить запись?')){ Diary.deleteEntry(id);
+  if(cloudEnabled() && Cloud.cachedUser()) Cloud.unpublishEntry(id).catch(e=>console.warn('unpublish:',e));
+  draft=null; closeModal(); rerender(); Sync.pushSoon(); } }
 async function shareCatch(id){
   const e = Diary.getEntries().find(x => x.id === id); if (!e) return;
   try {
