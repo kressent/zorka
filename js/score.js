@@ -242,23 +242,26 @@ export function computeForecast(data, opts = {}) {
     hourly.push({ h, sc: Math.round(v * 50) / 10 }); // 0..5, десятые
   }
 
-  // ближайшие дни
+  // прогноз на 2 недели (планировщик)
   const upcoming = [];
   const days = ['Вс','Пн','Вт','Ср','Чт','Пт','Сб'];
-  for (let i = todayIdx + 1; i < data.daily.time.length && i <= todayIdx + 4; i++) {
+  for (let i = todayIdx + 1; i < data.daily.time.length && i <= todayIdx + 13; i++) {
     const d = analyzeDay(data, i);
     const prev = analyzeDay(data, i - 1);
     const dctx = { ...ctx, month: d.month, wt: d.wt, cloud: d.cloud > 40, rain: d.rain,
                    pdir: d.pdir, wind: d.avgWD, drop: Math.max(0, prev.maxT - d.maxT) };
     const sc = activeSpecies(filter, custom).map(f => scoreFish(f, dctx).sc)
       .filter(x => x > 0).sort((a, b) => b - a).slice(0, 3);
-    const dt = new Date(d && data.daily.time[i]);
+    const dt = new Date(data.daily.time[i]);
     upcoming.push({
-      name: (i === todayIdx + 1) ? 'Завтра' : days[dt.getDay()],
+      name: (i === todayIdx + 1) ? 'Завтра' : `${days[dt.getDay()]} ${dt.getDate()}`,
       score: sc.length ? Math.round(avg(sc) * 10) / 10 : 0,
-      maxT: d.maxT, minT: d.minT, pdir: d.pdir, wcode: d.wcode,
+      maxT: d.maxT, minT: d.minT, avgP: d.avgP, pdir: d.pdir, wcode: d.wcode,
     });
   }
+  // лучший день (учитывая сегодня)
+  const bestDay = [{ name: 'Сегодня', score: dayScore }, ...upcoming]
+    .reduce((b, x) => (x.score > b.score ? x : b), { name: 'Сегодня', score: dayScore });
 
   const best = fish.find(f => f.sc >= 3) || fish[0];
   let advice = best && best.sc >= 2
@@ -270,7 +273,7 @@ export function computeForecast(data, opts = {}) {
     day: { score: dayScore, label: dayLabel(dayScore) },
     conditions: today, moon, sun: { srH, ssH },
     water, weatherBreak: brk,
-    fish, hourly, upcoming, advice,
+    fish, hourly, upcoming, bestDay, advice,
     windows: windowRanges(hourly),
     bestWindows: windowRanges(hourly).map(([a, b]) =>
       `${String(a).padStart(2,'0')}:00–${String(b % 24).padStart(2,'0')}:00`),

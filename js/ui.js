@@ -108,10 +108,15 @@ function renderForecast(){
         <div class="fish-tip">${esc(f.tp)}</div></div>`;
   }).join('');
 
-  const upHTML = fc.upcoming.map(u=>`<div class="dayrow">
-      <span class="dn">${u.name}</span><span style="font-size:15px">${wIcon(u.wcode)}</span>
-      <span class="di">${u.maxT}° / ${u.minT}° · ${u.avgP||''} ${pdirTxt(u.pdir).split(' ')[1]||''}</span>
-      <span class="dsc" style="color:${u.score>=4?'#2C6E5A':u.score>=3?'#C58A2E':'#7c8a80'}">${u.score.toFixed(1)}</span></div>`).join('');
+  const bestName = fc.bestDay ? fc.bestDay.name : null;
+  const upHTML = fc.upcoming.map(u=>{
+    const col = u.score>=4?'#2C6E5A':u.score>=3?'#C58A2E':'#7c8a80';
+    const best = u.name===bestName;
+    return `<div class="dayrow"${best?' style="background:rgba(197,138,46,.10)"':''}>
+      <span class="dn">${esc(u.name)}${best?' 🏆':''}</span><span style="font-size:15px">${wIcon(u.wcode)}</span>
+      <span class="di">${u.maxT}° / ${u.minT}° · ${u.avgP||''} мм ${pdirTxt(u.pdir).split(' ')[1]||''}</span>
+      <span class="dsc" style="color:${col}">${u.score.toFixed(1)}</span></div>`;
+  }).join('');
 
   return `${ST.fromCache?'<div class="badge-cache">⚠️ офлайн — данные из кэша</div>':''}
     <div class="wash">
@@ -134,7 +139,8 @@ function renderForecast(){
       <div class="lbl" style="margin-top:16px">Клёв сегодня</div>
       ${fishHTML || '<p style="color:var(--slate);font-size:13px;margin-top:10px">Нет выбранных видов.</p>'}
       <div class="adv">${esc(fc.advice)}</div>
-      <div class="lbl" style="margin-top:8px">Ближайшие дни</div>
+      <div class="lbl" style="margin-top:8px">Прогноз на 2 недели</div>
+      ${(fc.bestDay && fc.bestDay.name!=='Сегодня') ? `<div style="font-family:var(--font-serif);font-size:13.5px;color:var(--jade);margin:8px 0 2px">🏆 Лучший день — <b>${esc(fc.bestDay.name)}</b> · ${fc.bestDay.score.toFixed(1)}/5</div>` : `<div style="font-size:12.5px;color:var(--slate);margin:8px 0 2px">🏆 Лучший день — сегодня</div>`}
       <div class="days">${upHTML}</div>
       <div style="height:8px"></div>
     </div>`;

@@ -18,7 +18,7 @@ export function buildUrl(lat, lon) {
     + 'pressure_msl,windspeed_10m,winddirection_10m,weathercode'
     + '&daily=temperature_2m_max,temperature_2m_min,weathercode,precipitation_sum,'
     + 'winddirection_10m_dominant,sunrise,sunset'
-    + '&past_days=2&forecast_days=7&timezone=auto';
+    + '&past_days=2&forecast_days=14&timezone=auto';
 }
 
 export function historyUrl(lat, lon) {
