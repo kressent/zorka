@@ -28,6 +28,24 @@ function pdirTxt(p){ return p==='up'?'растёт ↑':p==='down'?'падает
 
 function bars(sc){ const n=clampI(Math.round(sc),0,5); return `<span class="bars s${n}"><i></i><i></i><i></i><i></i><i></i></span>`; }
 
+function toast(msg){
+  const t=document.createElement('div'); t.className='toast'; t.textContent=msg;
+  document.body.appendChild(t);
+  requestAnimationFrame(()=>t.classList.add('show'));
+  setTimeout(()=>{ t.classList.remove('show'); setTimeout(()=>t.remove(),320); }, 2800);
+}
+
+function hourlyBarsHTML(fc){
+  const now=new Date().getHours(); const maxH=34;
+  const bars=fc.hourly.map(h=>{
+    const col=h.sc>=4?'var(--jade)':h.sc>=3?'var(--brass)':h.sc>=2?'#9aa89f':'var(--empty)';
+    const ht=Math.max(3,Math.round(h.sc/5*maxH));
+    const lab=[0,6,12,18].includes(h.h)?h.h:'';
+    return `<div class="hb-wrap${h.h===now?' now':''}"><div class="hb" style="height:${ht}px;background:${col};opacity:${h.h<now?0.4:1}"></div><div class="hb-l">${lab}</div></div>`;
+  }).join('');
+  return `<div class="lbl" style="margin-top:16px">Клёв по часам</div><div class="hbars">${bars}</div>`;
+}
+
 const NAV = [
   ['forecast','Прогноз','<path d="M3 15c3 0 3-3 6-3s3 3 6 3 3-3 6-3M3 9c3 0 3-3 6-3s3 3 6 3 3-3 6-3"/>'],
   ['diary','Дневник','<path d="M4 5a2 2 0 0 1 2-2h13v18H6a2 2 0 0 1-2-2z"/><path d="M9 3v18"/>'],
@@ -119,6 +137,10 @@ function renderForecast(){
       <span class="dsc" style="color:${col}">${u.score.toFixed(1)}</span></div>`;
   }).join('');
 
+  const month = new Date().getMonth()+1;
+  const spawning = SPECIES.filter(f => f.sp && f.sp.includes(month));
+  const spawnBanner = spawning.length
+    ? `<div class="spawn-banner">🚫 Нерест: ${spawning.map(f=>f.n.toLowerCase()).join(', ')}. Во многих регионах ограничения (одна удочка, без спиннинга и лодки) — проверь местные правила.</div>` : '';
   return `${ST.fromCache?'<div class="badge-cache">⚠️ офлайн — данные из кэша</div>':''}
     <div class="wash">
       <div class="mast"><div class="t"><button onclick="Z.openCity()">📍 ${esc(ST.city.name)} <span class="chev">▾</span></button></div>
@@ -133,16 +155,19 @@ function renderForecast(){
     </div>
     <svg class="wave" viewBox="0 0 340 22" preserveAspectRatio="none"><path d="M0,12 C60,3 110,20 170,12 C230,4 280,20 340,10 L340,0 L0,0 Z" fill="#EFE9DB"/></svg>
     <div class="body">
+      ${spawnBanner}
       <div class="seg">${FILTERS.map(([id,l])=>`<button class="${ST.filter===id?'on':''}" onclick="Z.filter('${id}')">${l}</button>`).join('')}</div>
       <div class="alm"><div class="ah"><span>Окна клёва</span><b>${winLabel}</b></div>
         <div class="track">${bands}<div class="now" style="left:${nowFrac}%"></div></div>
         <div class="ticks"><span>00</span><span>06</span><span>12</span><span>18</span><span>24</span></div></div>
+      ${hourlyBarsHTML(fc)}
       <div class="lbl" style="margin-top:16px">Клёв сегодня</div>
       ${fishHTML || '<p style="color:var(--slate);font-size:13px;margin-top:10px">Нет выбранных видов.</p>'}
       <div class="adv">${esc(fc.advice)}</div>
       <div class="lbl" style="margin-top:8px">Прогноз на 2 недели</div>
       ${(fc.bestDay && fc.bestDay.name!=='Сегодня') ? `<div style="font-family:var(--font-serif);font-size:13.5px;color:var(--jade);margin:8px 0 2px">🏆 Лучший день — <b>${esc(fc.bestDay.name)}</b> · ${fc.bestDay.score.toFixed(1)}/5</div>` : `<div style="font-size:12.5px;color:var(--slate);margin:8px 0 2px">🏆 Лучший день — сегодня</div>`}
       <div class="days">${upHTML}</div>
+      <div class="honesty">Прогноз строится на погоде, давлении, луне, воде и сезоне. Станет точнее, когда рыбаки начнут отмечать уловы — это уже заложено.</div>
       <div style="height:8px"></div>
     </div>`;
 }
@@ -322,7 +347,9 @@ async function shareCatch(id){
   const e = Diary.getEntries().find(x => x.id === id); if (!e) return;
   try {
     const blob = await makeCatchCard(e, ST.city ? ST.city.name : '');
-    if (blob) await shareCard(blob, 'ulov-zorka.png');
+    if (!blob) return;
+    const res = await shareCard(blob, 'ulov-zorka.png');
+    if (res === 'saved') toast('Карточка сохранена — поделись ей из галереи 📤');
   } catch (err) { alert('Не удалось создать карточку: ' + (err && err.message || err)); }
 }
 

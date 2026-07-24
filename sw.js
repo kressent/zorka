@@ -3,7 +3,7 @@
 // Стратегия: оболочку приложения кэшируем (offline-first), погоду (Open-Meteo)
 // не кэшируем на уровне SW — у приложения свой кэш в localStorage на 3 часа.
 
-const VERSION = 'zorka-v3';
+const VERSION = 'zorka-v4';
 const SHELL = [
   './',
   './index.html',
@@ -20,6 +20,7 @@ const SHELL = [
   './js/tackle.js',
   './js/locations.js',
   './js/catchcard.js',
+  './icons/icon.svg',
   './icons/icon-192.png',
   './icons/icon-512.png',
 ];

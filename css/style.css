@@ -224,3 +224,25 @@ button{font-family:inherit}
 .loader{width:30px;height:30px;border:3px solid var(--line);border-top-color:var(--brass);border-radius:50%;animation:spin .8s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
 .badge-cache{font-family:var(--font-mono);font-size:10px;color:var(--brass);text-align:center;padding:6px;border-bottom:1px solid var(--line)}
+
+/* почасовой график клёва */
+.hbars{display:flex;align-items:flex-end;gap:2px;height:48px;margin-top:8px}
+.hb-wrap{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:3px}
+.hb{width:100%;max-width:9px;border-radius:2px 2px 0 0;transition:height .3s}
+.hb-wrap.now .hb{outline:1.5px solid var(--brass);outline-offset:1px}
+.hb-l{font-family:var(--font-mono);font-size:8px;color:var(--slate);height:9px}
+
+/* баннер нереста */
+.spawn-banner{background:var(--brass-soft,#f5ead6);border:1px solid var(--brass);color:var(--ink);
+  font-size:12px;line-height:1.4;padding:9px 12px;margin:12px 0 2px;
+  clip-path:polygon(10px 0,100% 0,100% 100%,0 100%,0 10px)}
+:root{--brass-soft:#f4ead6}
+
+/* honesty-строка */
+.honesty{font-size:11.5px;color:var(--slate);line-height:1.45;margin-top:16px;padding-top:12px;border-top:1px solid var(--line);font-family:var(--font-serif);font-style:italic}
+
+/* тост */
+.toast{position:fixed;left:50%;bottom:96px;transform:translate(-50%,20px);z-index:30;
+  background:var(--ink);color:var(--paper);font-size:13px;padding:11px 16px;border-radius:10px;
+  max-width:88%;text-align:center;box-shadow:0 6px 20px rgba(0,0,0,.25);opacity:0;transition:.3s;pointer-events:none}
+.toast.show{opacity:1;transform:translate(-50%,0)}

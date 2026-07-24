@@ -124,18 +124,20 @@ export async function makeCatchCard(entry, cityName) {
   return await new Promise(res => c.toBlob(b => res(b), 'image/png'));
 }
 
-// поделиться (мобильный Web Share) или скачать
+// поделиться (мобильный Web Share, нужен HTTPS) или скачать PNG.
+// Возвращает 'shared' | 'saved' | 'cancelled'.
 export async function shareCard(blob, filename = 'ulov-zorka.png') {
   try {
     const file = new File([blob], filename, { type: 'image/png' });
     if (navigator.canShare && navigator.canShare({ files: [file] })) {
       await navigator.share({ files: [file], text: 'Мой улов 🎣 Зорька — прогноз клёва' });
-      return;
+      return 'shared';
     }
-  } catch (e) { if (e && e.name === 'AbortError') return; }
+  } catch (e) { if (e && e.name === 'AbortError') return 'cancelled'; }
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a'); a.href = url; a.download = filename; a.click();
   setTimeout(() => URL.revokeObjectURL(url), 5000);
+  return 'saved';
 }
 
 // ── помощники рисования ──
