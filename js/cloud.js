@@ -226,6 +226,19 @@ export async function myStats() {
   return data;
 }
 
+// живое обновление: подписка на изменения комментариев/лайков (Supabase Realtime)
+// onChange(kind, payload) вызывается при любом insert/delete. Возвращает канал.
+let _rtChannel = null;
+export async function subscribeCommunity(onChange) {
+  const c = await client(); if (!c) return null;
+  if (_rtChannel) return _rtChannel;
+  _rtChannel = c.channel('zorka-community')
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'trip_comments' }, p => onChange('comment', p))
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'trip_likes' }, p => onChange('like', p))
+    .subscribe();
+  return _rtChannel;
+}
+
 // ── комментарии к выезду ──
 export async function fetchComments(tripKey) {
   const c = await client(); if (!c) return [];

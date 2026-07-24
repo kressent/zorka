@@ -442,6 +442,17 @@ async function checkEngagement(){
   if(notifs.length) rerender();
 }
 
+// живое обновление (Realtime): пришло изменение комментария/лайка
+let rtTimer=null;
+function onCommunityChange(){
+  clearTimeout(rtTimer);
+  rtTimer=setTimeout(()=>{
+    if(cmTrip && $('cmList')) refreshComments();     // открыта модалка → обновить (она же освежит ленту)
+    else if(ST.tab==='feed') loadFeed();             // видна лента → обновить счётчики
+    checkEngagement();                               // живой колокольчик
+  }, 700);
+}
+
 // ── МОДАЛКИ ──────────────────────────────────────────────────────────────────
 function openModal(html){
   closeModal();
@@ -706,6 +717,7 @@ export function initUI(){
   Sync.onSynced(() => rerender());
   if (cloudEnabled() && Cloud.cachedUser()) { Sync.syncOnLogin(); Cloud.ensureProfile().catch(()=>{}); setTimeout(checkEngagement, 1800); }
   if (cloudEnabled()) setTimeout(loadLureStats, 600);
+  if (cloudEnabled() && Cloud.cachedUser()) Cloud.subscribeCommunity(onCommunityChange).catch(()=>{});
   // возврат по ссылке из письма: supabase кладёт токен в hash — примем сессию
   if (cloudEnabled() && window.location && /access_token|error_code/.test(window.location.hash || '')) {
     Cloud.currentUser().then(u => {
