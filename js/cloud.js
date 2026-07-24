@@ -103,6 +103,23 @@ export async function pushData(obj) {
   return now;
 }
 
+// вставка уловов, устойчивая к «ещё не прогнанной миграции»: если PostgREST
+// не находит какую-то колонку (напр. trophy до 010) — выкидываем её и повторяем.
+async function insertCatchesResilient(c, rows) {
+  let attempt = rows;
+  for (let i = 0; i < 4; i++) {
+    const { error } = await c.from('catches').insert(attempt);
+    if (!error) return;
+    const m = /Could not find the '([^']+)' column/.exec(error.message || '');
+    if (m && attempt[0] && Object.prototype.hasOwnProperty.call(attempt[0], m[1])) {
+      const col = m[1];
+      attempt = attempt.map(r => { const { [col]: _drop, ...rest } = r; return rest; });
+      continue;
+    }
+    throw error;
+  }
+}
+
 // ── сообщество: публикация уловов, лента, лайки ──
 export async function publishCatches(entry, waterName, coords) {
   const c = await client(); if (!c) return; const u = await currentUser(); if (!u) return;
@@ -128,8 +145,7 @@ export async function publishCatches(entry, waterName, coords) {
     forecast_score: (entry.forecast && entry.forecast.score != null) ? entry.forecast.score : null,
     is_public: true,
   }));
-  const { error } = await c.from('catches').insert(rows);
-  if (error) throw error;
+  await insertCatchesResilient(c, rows);
 }
 
 // убрать из ленты все уловы удалённой записи дневника
