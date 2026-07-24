@@ -18,11 +18,13 @@ export function entryByDate(date) { return getEntries().find(e => e.date === dat
 export function upsertEntry(entry) {
   const list = getEntries();
   const i = list.findIndex(e => e.id === entry.id || (entry.date && e.date === entry.date));
-  if (i >= 0) list[i] = { ...list[i], ...entry, id: list[i].id };
-  else list.unshift({ id: uid(), ...entry });
+  let saved;
+  if (i >= 0) { saved = { ...list[i], ...entry, id: list[i].id }; list[i] = saved; }
+  else { saved = { id: uid(), ...entry }; list.unshift(saved); }
   list.sort((a, b) => (a.date < b.date ? 1 : -1));
   save(list);
-  return list;
+  entry.id = saved.id;   // вернуть id на переданный объект — чтобы публикация в ленту знала свой trip_id
+  return saved;
 }
 
 export function deleteEntry(id) { save(getEntries().filter(e => e.id !== id)); }
