@@ -194,20 +194,20 @@ function renderDiary(){
     <div class="stat"><b>${s.trips}</b><span>рыбалок</span></div>
     <div class="stat"><b>${s.withCatch}</b><span>с уловом</span></div>
     <div class="stat"><b>${s.fishCount}</b><span>рыб</span></div>
-    <div class="stat"><b>${s.totalKg}</b><span>кг</span></div></div>
+    <div class="stat"><b>${(s.totalG/1000).toFixed(1)}</b><span>кг</span></div></div>
     ${s.topSpecies.length?`<div class="lbl" style="margin-top:14px">Чаще всего</div><div class="tag-row">${s.topSpecies.map(([n,c])=>`<span class="tg">${esc(n)} · ${c}</span>`).join('')}</div>`:''}`;
 
   const entriesHTML = entries.length ? entries.map(e=>{
     const w = Diary.entryWeight(e), cnt = Diary.entryCount(e);
     const catches = (e.catches||[]).map(c=>{
-      const f=byId(c.species); return `<div class="cl"><span class="cn">${f?f.n:esc(c.species)}</span><span class="cw">${c.weight?c.weight.toFixed(2)+' кг':'—'}</span></div>`;
+      const f=byId(c.species); return `<div class="cl"><span class="cn">${f?f.n:esc(c.species)}</span><span class="cw">${c.weight?fmtW(c.weight):'—'}</span></div>`;
     }).join('');
     const d = new Date(e.date+'T12:00:00');
     return `<div class="entry">
       <div class="ed"><span class="dt">${d.getDate()} ${MONTHS_GEN[d.getMonth()]}, ${DOW[d.getDay()].toLowerCase()}</span>
         <span class="st">${'★'.repeat(e.rating||0)}${'☆'.repeat(5-(e.rating||0))}</span></div>
       ${(e.spot||e.forecast)?`<div class="em">${e.spot?`<span class="mchip">${esc(e.spot)}</span>`:''}${e.forecast?`<span class="mchip">${e.forecast.avgP||''} мм</span><span class="mchip">${e.forecast.maxT}°</span>`:''}</div>`:''}
-      ${cnt?`<div class="catchlist">${catches}<div class="cl tot"><span class="cn">Итого · ${cnt} ${cnt===1?'рыба':'рыб'}</span><span class="cw">${w?w.toFixed(2)+' кг':'—'}</span></div></div>`
+      ${cnt?`<div class="catchlist">${catches}<div class="cl tot"><span class="cn">Итого · ${cnt} ${cnt===1?'рыба':'рыб'}</span><span class="cw">${w?fmtW(w):'—'}</span></div></div>`
            :(e.visited?`<div style="font-size:12.5px;color:var(--slate);margin-top:8px">Был на рыбалке, без улова</div>`:'')}
       ${e.note?`<div class="en">«${esc(e.note)}»</div>`:''}
       <div style="display:flex;gap:8px;margin-top:11px">
@@ -280,6 +280,24 @@ function renderTackle(){
 }
 
 // ── ЭКРАН: ЛЕНТА УЛОВОВ ──────────────────────────────────────────────────────
+// вес: до 1 кг — граммы, дальше — кг
+function fmtW(gr){
+  const x=Number(gr);
+  if(!x||x<=0) return '';
+  return x<1000 ? Math.round(x)+' г' : (x/1000).toFixed(x%1000===0?0:1).replace('.',',')+' кг';
+}
+
+// ── рейтинг рыбака: очки (считает вью angler_stats) → ранг из 5 «рыбок» ──
+const RANKS=[
+  {n:1,t:'Новичок',min:0},
+  {n:2,t:'Рыбак',min:50},
+  {n:3,t:'Бывалый',min:150},
+  {n:4,t:'Мастер',min:400},
+  {n:5,t:'Легенда',min:900},
+];
+function anglerRank(points){ const p=Number(points)||0; let r=RANKS[0]; for(const x of RANKS) if(p>=x.min) r=x; return r; }
+function rankFish(n){ return '<span class="rf">'+'🐟'.repeat(n)+'<span class="rf-off">'+'🐟'.repeat(5-n)+'</span></span>'; }
+
 function renderFeed(){
   setTimeout(loadFeed, 0);
   return `<div class="pad"><div class="mast"><span class="t">Лента уловов</span><span class="d">от рыбаков</span></div>
@@ -301,9 +319,12 @@ function feedCard(it, mine){
   const f=byId(it.species); const nm=f?f.n:esc(it.species); const col=f?f.col:'#7c8a80';
   const d=it.caught_at?new Date(it.caught_at):null;
   const dl=d?`${d.getDate()} ${MONTHS_GEN[d.getMonth()]}`:'';
-  const w=it.weight!=null?` · ${Number(it.weight).toFixed(2).replace('.',',')} кг`:'';
+  const wv=fmtW(it.weight); const w=wv?` · ${wv}`:'';
   const sc=it.forecast_score!=null?`<span class="feed-badge">прогноз был ${Number(it.forecast_score).toFixed(1)}/5 ✅</span>`:'';
+  const rk=anglerRank(it.points);
+  const who=`<div class="fc-who"><span class="fc-name">${esc(it.handle||'Рыбак')}</span>${rankFish(rk.n)}<span class="fc-title">${rk.t}</span></div>`;
   return `<div class="feed-card">
+    ${who}
     <div class="fc-top"><span class="dot" style="background:${col}"></span>
       <div style="flex:1;min-width:0"><b>${nm}${w}</b><div class="fc-sub">${it.water_name?esc(it.water_name)+' · ':''}${dl}</div></div></div>
     ${sc?`<div class="fc-badges">${sc}</div>`:''}
@@ -331,19 +352,40 @@ function closeModal(){ const m=$('modal'); if(m) m.remove(); }
 // облако / аккаунт
 let authEmail = '';
 async function openAccount(){
-  openModal(`<h3>Облако Зорьки</h3><div class="center" style="min-height:120px"><div class="loader"></div></div>`);
+  openModal(`<h3>Мой профиль</h3><div class="center" style="min-height:120px"><div class="loader"></div></div>`);
   const user = await Cloud.currentUser();
   const s = document.querySelector('#modal .sheet'); if(!s) return;
   if(user){
-    s.innerHTML = `<button class="close" onclick="Z.closeModal()">✕</button><h3>Облако</h3>
-      <p style="font-size:14px;margin-top:6px">Вход выполнен:<br><b>${esc(user.email||'')}</b></p>
-      <div class="field" style="margin-top:14px"><label>Задать / сменить пароль — чтобы входить на других устройствах</label>
-        <input id="ac_setpass" type="password" autocomplete="new-password" placeholder="новый пароль, минимум 6"></div>
-      <button class="act" onclick="Z.setPass()">Сохранить пароль</button>
-      <p style="font-size:12px;color:var(--slate);margin-top:8px">Дальше на телефоне/айфоне входи этой же почтой и паролем — без писем.</p>
-      <button class="act" style="border-color:var(--jade);color:var(--jade);margin-top:12px" onclick="Z.syncNow()">🔄 Синхронизировать сейчас</button>
-      <p style="font-size:11.5px;color:var(--slate);margin-top:6px">Дневник, места и снасти синхронизируются сами. Кнопка — если хочешь обновить вручную.</p>
-      <button class="act" style="border-color:var(--bad);color:var(--bad);margin-top:10px" onclick="Z.signOut()">Выйти</button>`;
+    await Cloud.ensureProfile().catch(()=>{});
+    const st = await Cloud.myStats().catch(()=>null);
+    const handle = (st&&st.handle)||'';
+    const rk = anglerRank(st?st.points:0);
+    const nextR = RANKS.find(r=>r.min>(st?st.points:0));
+    const toNext = nextR ? `до «${nextR.t}» — ${nextR.min-(st?st.points:0)} очков` : 'высший ранг 🏆';
+    s.innerHTML = `<button class="close" onclick="Z.closeModal()">✕</button>
+      <div class="prof-head">
+        <div class="prof-fish">${rankFish(rk.n)}</div>
+        <div class="prof-name">${esc(handle||'Рыбак')}</div>
+        <div class="prof-title">${rk.t} · ${st?st.points:0} очков</div>
+        <div class="prof-next">${toNext}</div>
+      </div>
+      <div class="prof-stats">
+        <div><b>${st?st.catches||0:0}</b><span>уловов</span></div>
+        <div><b>${st?st.likes||0:0}</b><span>лайков</span></div>
+        <div><b>${st?st.species||0:0}</b><span>видов</span></div>
+        <div><b>${st?st.days||0:0}</b><span>дней</span></div>
+      </div>
+      <div class="field" style="margin-top:14px"><label>Ник в ленте — как тебя видят другие рыбаки</label>
+        <input id="ac_handle" maxlength="24" value="${esc(handle)}" placeholder="напр. Щукарь52"></div>
+      <button class="act" onclick="Z.saveHandle()">Сохранить ник</button>
+      <details class="acc-more"><summary>Аккаунт и синхронизация</summary>
+        <p style="font-size:13px;margin-top:8px">Вход выполнен: <b>${esc(user.email||'')}</b></p>
+        <div class="field" style="margin-top:10px"><label>Сменить пароль (для входа на других устройствах)</label>
+          <input id="ac_setpass" type="password" autocomplete="new-password" placeholder="новый пароль, минимум 6"></div>
+        <button class="act" onclick="Z.setPass()">Сохранить пароль</button>
+        <button class="act" style="border-color:var(--jade);color:var(--jade);margin-top:12px" onclick="Z.syncNow()">🔄 Синхронизировать сейчас</button>
+        <button class="act" style="border-color:var(--bad);color:var(--bad);margin-top:10px" onclick="Z.signOut()">Выйти</button>
+      </details>`;
   } else {
     s.innerHTML = accountEmailStep();
   }
@@ -361,7 +403,7 @@ async function acSignIn(){
   if(!authEmail || !authEmail.includes('@')){ alert('Введи корректную почту'); return; }
   if(!pass || pass.length<6){ alert('Пароль — минимум 6 символов'); return; }
   const s=document.querySelector('#modal .sheet'); const btn=s&&s.querySelector('.act'); if(btn) btn.textContent='Вхожу…';
-  try{ await Cloud.signInOrUp(authEmail, pass); closeModal(); toast('Вход выполнен — облако подключено ☁️'); rerender(); Sync.syncOnLogin(); }
+  try{ await Cloud.signInOrUp(authEmail, pass); closeModal(); toast('Вход выполнен — облако подключено ☁️'); Cloud.ensureProfile().catch(()=>{}); rerender(); Sync.syncOnLogin(); }
   catch(e){ alert(e.message||String(e)); if(btn) btn.textContent='Войти'; }
 }
 async function acSetPass(){
@@ -374,6 +416,12 @@ async function acSetPass(){
 async function acSignOut(){ await Cloud.signOut(); closeModal(); toast('Вышли из облака'); rerender(); }
 async function acSyncNow(){
   try{ toast('Синхронизирую…'); await Sync.syncNow(); closeModal(); toast('Синхронизировано ☁️'); rerender(); }
+  catch(e){ alert('Не удалось: '+(e.message||e)); }
+}
+async function acSaveHandle(){
+  const el=$('ac_handle'); if(!el) return; const h=el.value.trim();
+  if(h.length<2){ alert('Имя слишком короткое'); return; }
+  try{ await Cloud.setHandle(h); toast('Ник сохранён: '+h); if(ST.tab==='feed') loadFeed(); }
   catch(e){ alert('Не удалось: '+(e.message||e)); }
 }
 
@@ -429,7 +477,7 @@ function renderEntry(){
   const picker = SPECIES.map(f=>`<button onclick="Z.addCatch('${f.id}')"><span class="fd" style="background:${f.col}"></span>${f.n}</button>`).join('');
   const rows = draft.catches.map((c,i)=>{ const f=byId(c.species);
     return `<div class="catchrow"><span class="cname">${f?f.n:esc(c.species)}</span>
-      <input type="number" step="0.05" min="0" placeholder="кг" value="${c.weight??''}" oninput="Z.setW(${i},this.value)">
+      <input type="number" step="10" min="0" inputmode="numeric" placeholder="грамм" value="${c.weight??''}" oninput="Z.setW(${i},this.value)"><span class="cunit">г</span>
       <button class="rm" onclick="Z.rmCatch(${i})">✕</button></div>`; }).join('');
   const stars = [1,2,3,4,5].map(i=>`<span class="${(draft.rating||0)>=i?'on':''}" onclick="Z.setRating(${i})">★</span>`).join('');
   openModal(`<h3>${ruDateFull(d)}</h3>
@@ -443,7 +491,7 @@ function renderEntry(){
 }
 function addCatch(species){ draft.catches.push({species, weight:null}); syncEntryFields(); renderEntry(); }
 function rmCatch(i){ draft.catches.splice(i,1); syncEntryFields(); renderEntry(); }
-function setW(i,v){ draft.catches[i].weight = v===''?null:parseFloat(v)||null; }
+function setW(i,v){ draft.catches[i].weight = v===''?null:(Math.round(parseFloat(v))||null); }
 function setRating(r){ draft.rating=r; syncEntryFields(); renderEntry(); }
 function syncEntryFields(){ const s=$('e_spot'),n=$('e_note'); if(s)draft.spot=s.value; if(n)draft.note=n.value; }
 function saveEntry(){
@@ -537,7 +585,7 @@ function delPlace(i){ if(confirm('Удалить место?')){ removePlace(i);
 export function initUI(){
   Notify.ensureWelcome();
   Sync.onSynced(() => rerender());
-  if (cloudEnabled() && Cloud.cachedUser()) Sync.syncOnLogin();
+  if (cloudEnabled() && Cloud.cachedUser()) { Sync.syncOnLogin(); Cloud.ensureProfile().catch(()=>{}); }
   // возврат по ссылке из письма: supabase кладёт токен в hash — примем сессию
   if (cloudEnabled() && window.location && /access_token|error_code/.test(window.location.hash || '')) {
     Cloud.currentUser().then(u => {
@@ -549,7 +597,7 @@ export function initUI(){
     filter:(f)=>{ ST.filter=f; saveSettings(); rerender(); },
     tf:(el)=>el.classList.toggle('open'),
     openCity, searchCity, pickCity, geo, closeModal, openNotif,
-    openAccount, signIn: acSignIn, setPass: acSetPass, signOut: acSignOut, syncNow: acSyncNow, like: feedLike,
+    openAccount, signIn: acSignIn, setPass: acSetPass, signOut: acSignOut, syncNow: acSyncNow, saveHandle: acSaveHandle, like: feedLike,
     newEntry, editEntry, addCatch, rmCatch, setW, setRating, saveEntry, delEntry, shareCatch,
     newKit, editKit, kitIcon, kitTarget, addLure, lureQty, rmLure, saveKit, delKit,
     mapView:(v)=>{ ST.mapView=v; MapView.setLayer(v); document.querySelectorAll('.mtoggle button').forEach((b,i)=>b.classList.toggle('on',(i===0)===(v==='satellite'))); },

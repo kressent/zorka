@@ -56,15 +56,21 @@ export async function signInOrUp(email, password) {
   const inRes = await c.auth.signInWithPassword({ email, password });
   if (!inRes.error) return inRes.data.user;
   const msg = (inRes.error.message || '').toLowerCase();
+  // почта не подтверждена — но пароль верный: значит аккаунт есть, ждёт подтверждения
+  if (msg.includes('email not confirmed')) {
+    throw new Error('Почта ещё не подтверждена. Владелец приложения отключит подтверждение — после этого войди этой же почтой и паролем.');
+  }
   if (msg.includes('invalid login credentials')) {
-    const up = await c.auth.signUp({ email, password });
+    const redirect = (typeof window !== 'undefined' && window.location)
+      ? (window.location.origin + window.location.pathname) : undefined;
+    const up = await c.auth.signUp({ email, password, options: { emailRedirectTo: redirect } });
     if (up.error) {
       if ((up.error.message || '').toLowerCase().includes('already registered'))
         throw new Error('Аккаунт с этой почтой уже есть, но пароль неверный.');
       throw up.error;
     }
     if (up.data.session) return up.data.user; // подтверждение почты выключено → сразу сессия
-    throw new Error('Аккаунт создан, но включено подтверждение почты. Отключи «Confirm email» в Supabase → Authentication → Providers → Email.');
+    throw new Error('Аккаунт создан. Включено подтверждение почты — открой письмо и нажми ссылку, потом вернись и войди. (Владельцу: лучше выключить «Confirm email» в Supabase.)');
   }
   throw inRes.error;
 }
@@ -142,6 +148,41 @@ export async function toggleLike(catchId, on) {
     const { error } = await c.from('catch_likes').delete().eq('catch_id', catchId).eq('user_id', u.id);
     if (error) throw error;
   }
+}
+
+// ── профиль рыбака: ник + рейтинг (очки/ранг считает вью angler_stats) ──
+function genHandle(email) {
+  const base = String(email || '').split('@')[0].replace(/[^a-zа-яё0-9_.-]/gi, '').slice(0, 12) || 'Рыбак';
+  return base + '-' + Math.floor(1000 + Math.random() * 9000);
+}
+
+// создать профиль с ником, если его ещё нет; вернуть актуальный ник
+export async function ensureProfile(defaultHandle) {
+  const c = await client(); if (!c) return null;
+  const u = await currentUser(); if (!u) return null;
+  const { data } = await c.from('profiles').select('handle').eq('user_id', u.id).maybeSingle();
+  if (data && data.handle) return data.handle;
+  const handle = String(defaultHandle || genHandle(u.email)).slice(0, 24);
+  await c.from('profiles').insert({ user_id: u.id, handle }).then(() => {}, () => {});
+  return handle;
+}
+
+export async function setHandle(handle) {
+  const c = await client(); if (!c) throw new Error('Облако не настроено');
+  const u = await currentUser(); if (!u) throw new Error('Войди в аккаунт');
+  handle = String(handle).trim().slice(0, 24);
+  if (handle.length < 2) throw new Error('Имя слишком короткое');
+  const { error } = await c.from('profiles').upsert({ user_id: u.id, handle });
+  if (error) throw error;
+  return handle;
+}
+
+// мои агрегаты рыбака (уловы/лайки/дни/виды/очки/ник)
+export async function myStats() {
+  const c = await client(); if (!c) return null;
+  const u = await currentUser(); if (!u) return null;
+  const { data } = await c.from('angler_stats').select('*').eq('user_id', u.id).maybeSingle();
+  return data;
 }
 
 export async function signOut() {

@@ -277,3 +277,23 @@ button{font-family:inherit}
   padding:5px 12px;border-radius:99px;cursor:pointer;display:inline-flex;align-items:center;gap:5px}
 .like-btn.on{border-color:var(--bad);color:var(--bad);background:rgba(178,84,42,.06)}
 .like-btn .lc{font-family:var(--font-mono);font-weight:700}
+/* кто поймал (лента) */
+.feed-card .fc-who{display:flex;align-items:center;gap:7px;margin-bottom:8px;padding-bottom:8px;border-bottom:1px dotted var(--line);flex-wrap:wrap}
+.feed-card .fc-name{font-family:var(--font-serif);font-weight:700;font-size:13.5px;color:var(--ink)}
+.feed-card .fc-title{font-family:var(--font-mono);font-size:9px;letter-spacing:.06em;text-transform:uppercase;color:var(--brass);margin-left:auto}
+/* рыбки-рейтинг */
+.rf{font-size:11px;letter-spacing:1px;line-height:1;white-space:nowrap}
+.rf-off{opacity:.22;filter:grayscale(1)}
+/* профиль */
+.prof-head{text-align:center;padding:6px 0 4px}
+.prof-fish{font-size:18px;letter-spacing:2px}
+.prof-name{font-family:var(--font-serif);font-size:22px;font-weight:700;margin-top:8px}
+.prof-title{font-family:var(--font-mono);font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--brass);margin-top:4px}
+.prof-next{font-size:11.5px;color:var(--slate);margin-top:5px}
+.prof-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--rule);border:1px solid var(--rule);margin-top:14px}
+.prof-stats>div{background:var(--paper);padding:10px 4px;text-align:center}
+.prof-stats b{font-family:var(--font-serif);font-size:20px;font-weight:700;font-variant-numeric:tabular-nums;display:block}
+.prof-stats span{font-family:var(--font-mono);font-size:8.5px;letter-spacing:.05em;text-transform:uppercase;color:var(--slate)}
+.acc-more{margin-top:16px;border-top:1px solid var(--line);padding-top:10px}
+.acc-more summary{cursor:pointer;font-size:12.5px;color:var(--slate);font-family:var(--font-mono);letter-spacing:.05em;text-transform:uppercase}
+.catchrow .cunit{font-size:11px;color:var(--slate);margin-left:-2px}

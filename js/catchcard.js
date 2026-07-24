@@ -11,6 +11,13 @@ const SERIF = 'Georgia, "Times New Roman", serif';
 const SANS  = '"Segoe UI", system-ui, sans-serif';
 const MONTHS = ['января','февраля','марта','апреля','мая','июня','июля','августа','сентября','октября','ноября','декабря'];
 
+// вес: до 1 кг — в граммах, дальше — в килограммах
+function fmtW(gr) {
+  const x = Number(gr);
+  if (!x || x <= 0) return '';
+  return x < 1000 ? Math.round(x) + ' г' : (x / 1000).toFixed(x % 1000 === 0 ? 0 : 1).replace('.', ',') + ' кг';
+}
+
 // entry: запись дневника; cityName — водоём/город
 export async function makeCatchCard(entry, cityName) {
   const W = 1080, H = 1350;
@@ -55,7 +62,7 @@ export async function makeCatchCard(entry, cityName) {
     g.fillText(f ? f.n : heavy.species, cx, y);
     if (heavy.weight != null) {
       g.fillStyle = BRASS; g.font = `700 56px ${SERIF}`;
-      g.fillText(heavy.weight.toFixed(2).replace('.', ',') + ' кг', cx, y + 66);
+      g.fillText(fmtW(heavy.weight), cx, y + 66);
       y += 66;
     }
   } else {
@@ -70,7 +77,7 @@ export async function makeCatchCard(entry, cityName) {
     g.fillStyle = SLATE; g.font = `28px ${SANS}`;
     const line = others.map(x => {
       const f = byId(x.species);
-      return (f ? f.n : x.species) + (x.weight != null ? ' ' + x.weight.toFixed(2).replace('.', ',') : '');
+      return (f ? f.n : x.species) + (x.weight != null ? ' ' + fmtW(x.weight) : '');
     }).join('  ·  ');
     wrapText(g, '+ ' + line, cx, y, W - 240, 36);
     y += 36 * Math.ceil(g.measureText('+ ' + line).width / (W - 240));
@@ -81,7 +88,7 @@ export async function makeCatchCard(entry, cityName) {
     y += 20;
     setLS(g, 2);
     g.fillStyle = INK; g.font = `600 24px ${SANS}`;
-    g.fillText(`ИТОГО: ${cnt} ${cnt === 1 ? 'рыба' : 'рыб'}` + (total ? ` · ${total.toFixed(2).replace('.', ',')} кг` : ''), cx, y);
+    g.fillText(`ИТОГО: ${cnt} ${cnt === 1 ? 'рыба' : 'рыб'}` + (total ? ` · ${fmtW(total)}` : ''), cx, y);
     setLS(g, 0);
   }
 

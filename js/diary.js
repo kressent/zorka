@@ -37,12 +37,12 @@ export function stats() {
   const list = getEntries();
   const trips = list.filter(e => e.visited);
   const withCatch = trips.filter(e => (e.catches || []).length > 0);
-  let fishCount = 0, totalKg = 0, ratingSum = 0, ratingN = 0;
+  let fishCount = 0, totalG = 0, ratingSum = 0, ratingN = 0;
   const bySpecies = {};
   for (const e of list) {
     for (const c of (e.catches || [])) {
       fishCount++;
-      totalKg += c.weight || 0;
+      totalG += c.weight || 0;
       const f = byId(c.species);
       const nm = f ? f.n : c.species;
       bySpecies[nm] = (bySpecies[nm] || 0) + 1;
@@ -54,7 +54,8 @@ export function stats() {
     trips: trips.length,
     withCatch: withCatch.length,
     fishCount,
-    totalKg: Math.round(totalKg * 10) / 10,
+    totalG,
+    totalKg: Math.round(totalG / 100) / 10, // для показа в кг
     avgRating: ratingN ? Math.round(ratingSum / ratingN * 10) / 10 : null,
     topSpecies,
   };
