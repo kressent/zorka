@@ -49,6 +49,33 @@ export async function verifyCode(email, token) {
   return data.user;
 }
 
+// вход по почте+паролю; если аккаунта нет — создаём (без писем и лимитов)
+export async function signInOrUp(email, password) {
+  const c = await client(); if (!c) throw new Error('Облако не настроено');
+  email = String(email).trim(); password = String(password);
+  const inRes = await c.auth.signInWithPassword({ email, password });
+  if (!inRes.error) return inRes.data.user;
+  const msg = (inRes.error.message || '').toLowerCase();
+  if (msg.includes('invalid login credentials')) {
+    const up = await c.auth.signUp({ email, password });
+    if (up.error) {
+      if ((up.error.message || '').toLowerCase().includes('already registered'))
+        throw new Error('Аккаунт с этой почтой уже есть, но пароль неверный.');
+      throw up.error;
+    }
+    if (up.data.session) return up.data.user; // подтверждение почты выключено → сразу сессия
+    throw new Error('Аккаунт создан, но включено подтверждение почты. Отключи «Confirm email» в Supabase → Authentication → Providers → Email.');
+  }
+  throw inRes.error;
+}
+
+// задать/сменить пароль текущему аккаунту (для входа на других устройствах)
+export async function setPassword(password) {
+  const c = await client(); if (!c) throw new Error('Облако не настроено');
+  const { error } = await c.auth.updateUser({ password: String(password) });
+  if (error) throw error;
+}
+
 export async function signOut() {
   try { const c = await client(); if (c) await c.auth.signOut(); } catch (e) {}
 }

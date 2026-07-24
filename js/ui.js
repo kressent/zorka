@@ -149,10 +149,10 @@ function renderForecast(){
       <div class="mast"><div class="t"><button onclick="Z.openCity()">📍 ${esc(ST.city.name)} <span class="chev">▾</span></button></div>
         <div class="mast-right">
           <div class="mr-icons">
-            <button class="bell" onclick="Z.openNotif()" aria-label="Уведомления">🔔${Notify.unread()?`<span class="ndot">${Notify.unread()}</span>`:''}</button>
             ${cloudEnabled()?(acct
-              ? `<button class="acct-in" onclick="Z.openAccount()" title="${esc(acct.email)}"><span class="dot-on"></span>${esc(acct.email.split('@')[0])}</button>`
+              ? `<button class="bell acct-on" onclick="Z.openAccount()" aria-label="Аккаунт: ${esc(acct.email)}">👤</button>`
               : `<button class="bell" onclick="Z.openAccount()" aria-label="Войти в аккаунт">👤</button>`):''}
+            <button class="bell" onclick="Z.openNotif()" aria-label="Уведомления">🔔${Notify.unread()?`<span class="ndot">${Notify.unread()}</span>`:''}</button>
           </div>
           <span class="d">${ruDateShort(now)}</span>
         </div></div>
@@ -293,29 +293,37 @@ async function openAccount(){
   if(user){
     s.innerHTML = `<button class="close" onclick="Z.closeModal()">✕</button><h3>Облако</h3>
       <p style="font-size:14px;margin-top:6px">Вход выполнен:<br><b>${esc(user.email||'')}</b></p>
-      <p style="font-size:12px;color:var(--slate);margin-top:8px">Аккаунт готов. Следующим шагом подключим синхронизацию дневника между устройствами и общую ленту уловов.</p>
-      <button class="act" style="border-color:var(--bad);color:var(--bad)" onclick="Z.signOut()">Выйти</button>`;
+      <div class="field" style="margin-top:14px"><label>Задать / сменить пароль — чтобы входить на других устройствах</label>
+        <input id="ac_setpass" type="password" autocomplete="new-password" placeholder="новый пароль, минимум 6"></div>
+      <button class="act" onclick="Z.setPass()">Сохранить пароль</button>
+      <p style="font-size:12px;color:var(--slate);margin-top:8px">Дальше на телефоне/айфоне входи этой же почтой и паролем — без писем.</p>
+      <button class="act" style="border-color:var(--bad);color:var(--bad);margin-top:8px" onclick="Z.signOut()">Выйти</button>`;
   } else {
     s.innerHTML = accountEmailStep();
   }
 }
 function accountEmailStep(){
   return `<button class="close" onclick="Z.closeModal()">✕</button><h3>Вход в облако</h3>
-    <p style="font-size:12.5px;color:var(--slate);margin:2px 0 10px">Вход по ссылке из письма — пароль не нужен. Это включит облако: сохранение между устройствами и (дальше) сообщество.</p>
-    <div class="field"><label>Почта</label><input id="ac_email" type="email" inputmode="email" placeholder="you@mail.ru" value="${esc(authEmail)}"></div>
-    <button class="act" onclick="Z.sendCode()">Получить ссылку</button>`;
+    <p style="font-size:12.5px;color:var(--slate);margin:2px 0 10px">Введи почту и пароль. Нет аккаунта — создастся автоматически. Это включит облако: одинаковые данные на всех устройствах и (дальше) сообщество.</p>
+    <div class="field"><label>Почта</label><input id="ac_email" type="email" inputmode="email" autocomplete="email" placeholder="you@mail.ru" value="${esc(authEmail)}"></div>
+    <div class="field"><label>Пароль</label><input id="ac_pass" type="password" autocomplete="current-password" placeholder="минимум 6 символов"></div>
+    <button class="act" onclick="Z.signIn()">Войти</button>`;
 }
-function accountLinkSent(){
-  return `<button class="close" onclick="Z.closeModal()">✕</button><h3>Письмо отправлено 📩</h3>
-    <p style="font-size:13.5px;line-height:1.5">Ссылка для входа отправлена на <b>${esc(authEmail)}</b>.<br>Открой письмо и нажми ссылку — вернёшься сюда уже в аккаунте. (Загляни и в «Спам».)</p>
-    <button class="act" style="border-color:var(--slate);color:var(--slate)" onclick="Z.openAccount()">Ввести другую почту</button>`;
-}
-async function acSendCode(){
-  const el=$('ac_email'); if(!el) return; authEmail=el.value.trim();
+async function acSignIn(){
+  const em=$('ac_email'), pw=$('ac_pass'); if(!em||!pw) return;
+  authEmail=em.value.trim(); const pass=pw.value;
   if(!authEmail || !authEmail.includes('@')){ alert('Введи корректную почту'); return; }
-  const s=document.querySelector('#modal .sheet'); const btn=s&&s.querySelector('.act'); if(btn) btn.textContent='Отправляю…';
-  try{ await Cloud.sendCode(authEmail); if(s) s.innerHTML=accountLinkSent(); }
-  catch(e){ alert('Не удалось отправить письмо: '+(e.message||e)); if(btn) btn.textContent='Получить ссылку'; }
+  if(!pass || pass.length<6){ alert('Пароль — минимум 6 символов'); return; }
+  const s=document.querySelector('#modal .sheet'); const btn=s&&s.querySelector('.act'); if(btn) btn.textContent='Вхожу…';
+  try{ await Cloud.signInOrUp(authEmail, pass); closeModal(); toast('Вход выполнен — облако подключено ☁️'); rerender(); }
+  catch(e){ alert(e.message||String(e)); if(btn) btn.textContent='Войти'; }
+}
+async function acSetPass(){
+  const el=$('ac_setpass'); if(!el) return; const pw=el.value;
+  if(!pw || pw.length<6){ alert('Пароль — минимум 6 символов'); return; }
+  const btn=document.querySelector('#modal .act'); if(btn) btn.textContent='Сохраняю…';
+  try{ await Cloud.setPassword(pw); closeModal(); toast('Пароль сохранён — входи им на других устройствах'); }
+  catch(e){ alert('Не удалось: '+(e.message||e)); if(btn) btn.textContent='Сохранить пароль'; }
 }
 async function acSignOut(){ await Cloud.signOut(); closeModal(); toast('Вышли из облака'); rerender(); }
 
@@ -481,7 +489,7 @@ export function initUI(){
     filter:(f)=>{ ST.filter=f; saveSettings(); rerender(); },
     tf:(el)=>el.classList.toggle('open'),
     openCity, searchCity, pickCity, geo, closeModal, openNotif,
-    openAccount, sendCode: acSendCode, signOut: acSignOut,
+    openAccount, signIn: acSignIn, setPass: acSetPass, signOut: acSignOut,
     newEntry, editEntry, addCatch, rmCatch, setW, setRating, saveEntry, delEntry, shareCatch,
     newKit, editKit, kitIcon, kitTarget, addLure, lureQty, rmLure, saveKit, delKit,
     mapView:(v)=>{ ST.mapView=v; rerender(); }, newPlace, placeGeo, savePlace, delPlace,
