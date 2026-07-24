@@ -112,7 +112,10 @@ export async function publishCatches(entry, waterName, coords) {
     forecast_score: (entry.forecast && entry.forecast.score != null) ? entry.forecast.score : null,
     is_public: true,
   }));
-  const { error } = await c.from('catches').upsert(rows, { onConflict: 'user_id,client_id' });
+  // удаляем прошлые строки этой записи, затем вставляем свежие
+  // (без зависимости от уникального ограничения / миграции 005)
+  await c.from('catches').delete().eq('user_id', u.id).like('client_id', entry.id + ':%');
+  const { error } = await c.from('catches').insert(rows);
   if (error) throw error;
 }
 
