@@ -41,6 +41,9 @@ function synth() {
 }
 
 async function getData(){
+  // По умолчанию — синтетика (детерминированно + чистый выход процесса).
+  // Живые данные Open-Meteo — по флагу: ZORKA_LIVE=1 node test/engine.test.js
+  if (!process.env.ZORKA_LIVE) { console.log('  · данные: синтетика (живые: ZORKA_LIVE=1)'); return synth(); }
   try {
     const r = await fetch(buildUrl(SALAVAT.lat, SALAVAT.lon), { signal: AbortSignal.timeout(8000) });
     if (r.ok) {
