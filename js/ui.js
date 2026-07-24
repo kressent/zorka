@@ -17,6 +17,7 @@ import * as Sync from './sync.js';
 import * as MapView from './mapview.js';
 import { weekTop, tripHeaviest } from './leaderboard.js';
 import { engagementNotifs } from './engagement.js';
+import { indexLureStats, topLures } from './lurestats.js';
 import { cloudEnabled } from './config.js';
 
 // ── помощники ────────────────────────────────────────────────────────────────
@@ -134,6 +135,7 @@ function renderForecast(){
           <div class="dg"><div class="k">📏 Глубина</div><div class="v">${esc(f.dp)}</div></div></div>
         <div class="lbl">📍 Места</div><div class="tag-row">${f.sp2.map(s=>`<span class="tg">${esc(s)}</span>`).join('')}</div>
         <div class="lbl">🎣 Приманки</div><div class="tag-row">${f.lr.map(l=>`<span class="tg lure">${esc(l)}</span>`).join('')}</div>
+        ${realLureHTML(f.id)}
         <div class="fish-tip">${esc(f.tp)}</div></div>`;
   }).join('');
 
@@ -202,7 +204,7 @@ function renderDiary(){
   const entriesHTML = entries.length ? entries.map(e=>{
     const w = Diary.entryWeight(e), cnt = Diary.entryCount(e);
     const catches = (e.catches||[]).map(c=>{
-      const f=byId(c.species); return `<div class="cl"><span class="cn">${f?f.n:esc(c.species)}</span><span class="cw">${c.weight?fmtW(c.weight):'—'}</span></div>`;
+      const f=byId(c.species); return `<div class="cl"><span class="cn">${f?f.n:esc(c.species)}${c.lure?` <span class="cl-lure">· ${esc(c.lure)}</span>`:''}</span><span class="cw">${c.weight?fmtW(c.weight):'—'}</span></div>`;
     }).join('');
     const d = new Date(e.date+'T12:00:00');
     return `<div class="entry">
@@ -299,6 +301,19 @@ const RANKS=[
 ];
 function anglerRank(points){ const p=Number(points)||0; let r=RANKS[0]; for(const x of RANKS) if(p>=x.min) r=x; return r; }
 function rankFish(n){ return '<span class="rf">'+'🐟'.repeat(n)+'<span class="rf-off">'+'🐟'.repeat(5-n)+'</span></span>'; }
+
+// ── рейтинг приманок «что на что реально берёт» (маховик данных) ──
+let LURE_STATS = {};
+async function loadLureStats(){
+  if(!cloudEnabled()) return;
+  try{ LURE_STATS = indexLureStats(await Cloud.fetchLureRating()); rerender(); }catch(e){}
+}
+function realLureHTML(species){
+  const top = topLures(LURE_STATS, species, 3);
+  if(!top.length) return '';
+  const chips = top.map(l=>`<span class="tg real">${esc(l.lure)} <b>·${l.n}</b></span>`).join('');
+  return `<div class="lbl">🔥 Реально берут на <span class="lbl-sub">(по уловам рыбаков)</span></div><div class="tag-row">${chips}</div>`;
+}
 
 function renderFeed(){
   setTimeout(loadFeed, 0);
@@ -564,9 +579,13 @@ function renderEntry(){
   const d=new Date(draft.date+'T12:00:00');
   const picker = SPECIES.map(f=>`<button onclick="Z.addCatch('${f.id}')"><span class="fd" style="background:${f.col}"></span>${f.n}</button>`).join('');
   const rows = draft.catches.map((c,i)=>{ const f=byId(c.species);
+    const cands = lureCandidates(c.species);
+    const chips = cands.map(l=>`<button class="lure-chip${c.lure===l?' on':''}" onclick="Z.setLure(${i},'${escJs(l)}')">${esc(l)}</button>`).join('');
+    const customOn = c.lure && !cands.includes(c.lure);
     return `<div class="catchrow"><span class="cname">${f?f.n:esc(c.species)}</span>
       <input type="number" step="10" min="0" inputmode="numeric" placeholder="грамм" value="${c.weight??''}" oninput="Z.setW(${i},this.value)"><span class="cunit">г</span>
-      <button class="rm" onclick="Z.rmCatch(${i})">✕</button></div>`; }).join('');
+      <button class="rm" onclick="Z.rmCatch(${i})">✕</button></div>
+      <div class="lure-chips"><span class="lure-lbl">на что:</span>${chips}<button class="lure-chip cust${customOn?' on':''}" onclick="Z.lureCustom(${i})">${customOn?esc(c.lure):'+ своё'}</button></div>`; }).join('');
   const stars = [1,2,3,4,5].map(i=>`<span class="${(draft.rating||0)>=i?'on':''}" onclick="Z.setRating(${i})">★</span>`).join('');
   openModal(`<h3>${ruDateFull(d)}</h3>
     <div class="field"><label>Место (по желанию)</label><input id="e_spot" value="${esc(draft.spot||'')}" placeholder="напр. Устье Нугуша"></div>
@@ -580,6 +599,15 @@ function renderEntry(){
 function addCatch(species){ draft.catches.push({species, weight:null}); syncEntryFields(); renderEntry(); }
 function rmCatch(i){ draft.catches.splice(i,1); syncEntryFields(); renderEntry(); }
 function setW(i,v){ draft.catches[i].weight = v===''?null:(Math.round(parseFloat(v))||null); }
+function escJs(s){ return String(s).replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/\r?\n/g,' '); }
+function lureCandidates(species){
+  const f=byId(species); const out=[];
+  try{ Tackle.getKits().forEach(k=>(k.lures||[]).forEach(l=>{ if(l&&l.name) out.push(l.name); })); }catch(e){}
+  if(f&&f.lr) f.lr.forEach(l=>out.push(l));
+  return [...new Set(out)].slice(0,6);
+}
+function setLure(i,l){ if(!draft||!draft.catches[i]) return; syncEntryFields(); draft.catches[i].lure = (draft.catches[i].lure===l)?null:l; renderEntry(); }
+function lureCustom(i){ if(!draft||!draft.catches[i]) return; syncEntryFields(); const v=prompt('На что поймал? (приманка/наживка)', draft.catches[i].lure||''); if(v!=null){ const t=v.trim(); draft.catches[i].lure=t||null; renderEntry(); } }
 function setRating(r){ draft.rating=r; syncEntryFields(); renderEntry(); }
 function syncEntryFields(){ const s=$('e_spot'),n=$('e_note'); if(s)draft.spot=s.value; if(n)draft.note=n.value; }
 function saveEntry(){
@@ -677,6 +705,7 @@ export function initUI(){
   Notify.ensureWelcome();
   Sync.onSynced(() => rerender());
   if (cloudEnabled() && Cloud.cachedUser()) { Sync.syncOnLogin(); Cloud.ensureProfile().catch(()=>{}); setTimeout(checkEngagement, 1800); }
+  if (cloudEnabled()) setTimeout(loadLureStats, 600);
   // возврат по ссылке из письма: supabase кладёт токен в hash — примем сессию
   if (cloudEnabled() && window.location && /access_token|error_code/.test(window.location.hash || '')) {
     Cloud.currentUser().then(u => {
@@ -690,7 +719,7 @@ export function initUI(){
     openCity, searchCity, pickCity, geo, closeModal, openNotif,
     openAccount, signIn: acSignIn, setPass: acSetPass, signOut: acSignOut, syncNow: acSyncNow, saveHandle: acSaveHandle,
     like: feedLike, comments: openComments, sendComment, delComment,
-    newEntry, editEntry, addCatch, rmCatch, setW, setRating, saveEntry, delEntry, shareCatch,
+    newEntry, editEntry, addCatch, rmCatch, setW, setLure, lureCustom, setRating, saveEntry, delEntry, shareCatch,
     newKit, editKit, kitIcon, kitTarget, addLure, lureQty, rmLure, saveKit, delKit,
     mapView:(v)=>{ ST.mapView=v; MapView.setLayer(v); document.querySelectorAll('.mtoggle button').forEach((b,i)=>b.classList.toggle('on',(i===0)===(v==='satellite'))); },
     mapPick:(la,lo)=>newPlace({lat:la,lon:lo}), newPlace, placeGeo, savePlace, delPlace,

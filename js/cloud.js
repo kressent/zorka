@@ -137,6 +137,7 @@ export async function publishCatches(entry, waterName, coords) {
     species: x.species,
     weight: (x.weight ?? null),
     trophy: isTrophy(x.species, x.weight),
+    lure: (x.lure ? String(x.lure).slice(0, 60) : null),
     caught_at: caughtAt,
     water_name: place,
     lat: (coords && coords.lat) || null,
@@ -158,6 +159,14 @@ export async function unpublishEntry(entryId) {
 export async function fetchFeed(limit = 40) {
   const c = await client(); if (!c) return [];
   const { data, error } = await c.from('feed_trips').select('*').order('caught_at', { ascending: false }).limit(limit);
+  if (error) throw error;
+  return data || [];
+}
+
+// статистика приманок «что на что реально берёт» (вью lure_rating)
+export async function fetchLureRating() {
+  const c = await client(); if (!c) return [];
+  const { data, error } = await c.from('lure_rating').select('*');
   if (error) throw error;
   return data || [];
 }
