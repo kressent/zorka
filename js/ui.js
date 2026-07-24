@@ -16,6 +16,7 @@ import * as Cloud from './cloud.js';
 import * as Sync from './sync.js';
 import * as MapView from './mapview.js';
 import { weekTop, tripHeaviest } from './leaderboard.js';
+import { engagementNotifs } from './engagement.js';
 import { cloudEnabled } from './config.js';
 
 // ── помощники ────────────────────────────────────────────────────────────────
@@ -410,6 +411,22 @@ async function delComment(id){
   catch(e){ alert('Не удалось: '+(e.message||e)); }
 }
 
+// ── уведомления сообщества: лайки/комментарии к моим уловам ──
+const SEEN_KEY='zorka_seen_engagement';
+function loadSeen(){ try{ return JSON.parse(localStorage.getItem(SEEN_KEY)||'{}'); }catch(e){ return {}; } }
+function saveSeen(o){ try{ localStorage.setItem(SEEN_KEY, JSON.stringify(o)); }catch(e){} }
+async function checkEngagement(){
+  if(!(cloudEnabled() && Cloud.cachedUser())) return;
+  let me, items;
+  try{ me=await Cloud.currentUserId(); if(!me) return; items=await Cloud.fetchFeed(60); }catch(e){ return; }
+  const mine=(items||[]).filter(t=>t.user_id===me);
+  if(!mine.length){ return; }
+  const { notifs, next } = engagementNotifs(mine, loadSeen());
+  notifs.forEach(n=>Notify.addNotif(n));
+  saveSeen(next);
+  if(notifs.length) rerender();
+}
+
 // ── МОДАЛКИ ──────────────────────────────────────────────────────────────────
 function openModal(html){
   closeModal();
@@ -659,7 +676,7 @@ function delPlace(i){ if(confirm('Удалить место?')){ removePlace(i);
 export function initUI(){
   Notify.ensureWelcome();
   Sync.onSynced(() => rerender());
-  if (cloudEnabled() && Cloud.cachedUser()) { Sync.syncOnLogin(); Cloud.ensureProfile().catch(()=>{}); }
+  if (cloudEnabled() && Cloud.cachedUser()) { Sync.syncOnLogin(); Cloud.ensureProfile().catch(()=>{}); setTimeout(checkEngagement, 1800); }
   // возврат по ссылке из письма: supabase кладёт токен в hash — примем сессию
   if (cloudEnabled() && window.location && /access_token|error_code/.test(window.location.hash || '')) {
     Cloud.currentUser().then(u => {
