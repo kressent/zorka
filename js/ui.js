@@ -15,6 +15,7 @@ import * as Regs from './regulations.js';
 import * as Cloud from './cloud.js';
 import * as Sync from './sync.js';
 import * as MapView from './mapview.js';
+import { weekTop, tripHeaviest } from './leaderboard.js';
 import { cloudEnabled } from './config.js';
 
 // ── помощники ────────────────────────────────────────────────────────────────
@@ -308,11 +309,12 @@ async function loadFeed(){
   const box=$('feedBody'); if(!box) return;
   if(!cloudEnabled()){ box.innerHTML=feedEmpty('Облако не настроено.'); return; }
   try{
-    const items=await Cloud.fetchFeed(40);
+    const items=await Cloud.fetchFeed(60);
     if(!items.length){ box.innerHTML=feedEmpty('Пока пусто. Запиши улов в дневнике — и он появится тут (для всех, место огрублённо).'); return; }
     const me = Cloud.cachedUser() ? await Cloud.currentUserId() : null;
     const liked = me ? await Cloud.myLikes(items.map(i=>i.id)) : new Set();
-    box.innerHTML = items.map(it=>feedCard(it, liked.has(it.id), me)).join('');
+    const top = weekTop(items, Date.now(), 3);
+    box.innerHTML = (top.length?leaderboardHTML(top):'') + items.map(it=>feedCard(it, liked.has(it.id), me)).join('');
   }catch(e){ box.innerHTML=feedEmpty('Не удалось загрузить ленту. '+(e.message||'')); }
 }
 function feedEmpty(msg){ return `<div class="empty"><div class="ei">🎣</div><p>${esc(msg)}</p></div>`; }
@@ -332,12 +334,30 @@ function feedCard(it, mine, myId){
   const like = isMine
     ? `<div class="tc-own">❤ <span class="lc">${it.likes||0}</span> · твой улов</div>`
     : `<button class="like-btn${mine?' on':''}" onclick="Z.like('${it.id}',this)">❤ <span class="lc">${it.likes||0}</span></button>`;
+  const cm = `<button class="cm-btn" onclick="Z.comments('${it.id}')">💬 <span class="cc">${it.comments||0}</span></button>`;
   return `<div class="feed-card">
     ${who}
     ${head}
     <div class="tc-list">${rows||'<div class="tc-fish"><span class="tc-fn" style="color:var(--slate)">Был на рыбалке</span></div>'}</div>
     ${sc?`<div class="fc-badges">${sc}</div>`:''}
-    ${like}
+    <div class="fc-actions">${like}${cm}</div>
+  </div>`;
+}
+// 🏆 Улов недели — топ выездов за 7 дней (лайки → крупная рыба → свежесть)
+function leaderboardHTML(top){
+  const win=top[0]; const wh=tripHeaviest(win);
+  const wfn=wh?(byId(wh.species)?byId(wh.species).n:esc(wh.species)):'Улов';
+  const wfw=wh?fmtW(wh.weight):'';
+  const rows=top.slice(1).map((t,i)=>{ const h=tripHeaviest(t); const nm=h?(byId(h.species)?byId(h.species).n:esc(h.species)):'—'; const w=h?fmtW(h.weight):'';
+    return `<div class="lb-row"><span class="lb-pos">${i+2}</span><span class="lb-who">${esc(t.handle||'Рыбак')}</span><span class="lb-fish">${nm}${w?' · '+w:''}</span><span class="lb-likes">❤ ${t.likes||0}</span></div>`; }).join('');
+  return `<div class="lb">
+    <div class="lb-head">🏆 Улов недели</div>
+    <div class="lb-win">
+      <div class="lb-win-name">${esc(win.handle||'Рыбак')}</div>
+      <div class="lb-win-fish">${wfn}${wfw?` · <b>${wfw}</b>`:''}</div>
+      <div class="lb-win-sub">${win.water_name?esc(win.water_name)+' · ':''}❤ ${win.likes||0}${win.comments?' · 💬 '+win.comments:''}</div>
+    </div>
+    ${rows?`<div class="lb-list">${rows}</div>`:''}
   </div>`;
 }
 async function feedLike(id, btn){
@@ -346,6 +366,47 @@ async function feedLike(id, btn){
   btn.classList.toggle('on',on); lc.textContent=on?cur+1:Math.max(0,cur-1);
   try{ await Cloud.toggleLike(id,on); }
   catch(e){ btn.classList.toggle('on',!on); lc.textContent=cur; toast('Не удалось: '+(e.message||e)); }
+}
+
+// ── комментарии к выезду ──
+let cmTrip=null;
+async function openComments(tripKey){
+  cmTrip=tripKey;
+  openModal(`<h3>Комментарии</h3><div class="center" style="min-height:100px"><div class="loader"></div></div>`);
+  const me = Cloud.cachedUser() ? await Cloud.currentUserId() : null;
+  let list=[]; try{ list=await Cloud.fetchComments(tripKey); }catch(e){}
+  const s=document.querySelector('#modal .sheet'); if(!s || cmTrip!==tripKey) return;
+  s.innerHTML=`<button class="close" onclick="Z.closeModal()">✕</button><h3>Комментарии</h3>
+    <div class="cm-list" id="cmList">${renderComments(list, me)}</div>
+    ${me?`<div class="cm-add"><input id="cm_input" maxlength="500" placeholder="Написать комментарий…" onkeydown="if(event.key==='Enter')Z.sendComment()"><button class="cm-send" onclick="Z.sendComment()">➤</button></div>`
+        :`<p style="font-size:12.5px;color:var(--slate);margin-top:10px">Войди в аккаунт (👤), чтобы комментировать.</p>`}`;
+  setTimeout(()=>{ const el=$('cm_input'); if(el) el.focus(); },150);
+}
+function renderComments(list, me){
+  if(!list||!list.length) return `<p class="cm-empty">Пока нет комментариев. Будь первым 🎣</p>`;
+  return list.map(c=>{
+    const d=c.created_at?new Date(c.created_at):null;
+    const dl=d?`${d.getDate()} ${MONTHS_GEN[d.getMonth()]}`:'';
+    const mine=me && c.user_id===me;
+    return `<div class="cm-item"><div class="cm-h"><b>${esc(c.handle||'Рыбак')}</b><span class="cm-t">${dl}</span>${mine?`<button class="cm-del" onclick="Z.delComment('${c.id}')">✕</button>`:''}</div><div class="cm-b">${esc(c.body)}</div></div>`;
+  }).join('');
+}
+async function refreshComments(){
+  const me = Cloud.cachedUser() ? await Cloud.currentUserId() : null;
+  let list=[]; try{ list=await Cloud.fetchComments(cmTrip); }catch(e){}
+  const box=$('cmList'); if(box) box.innerHTML=renderComments(list, me);
+  if(ST.tab==='feed') loadFeed();
+}
+async function sendComment(){
+  const el=$('cm_input'); if(!el) return; const body=el.value.trim(); if(!body) return;
+  el.value='';
+  try{ await Cloud.addComment(cmTrip, body); await refreshComments(); }
+  catch(e){ alert('Не удалось: '+(e.message||e)); }
+}
+async function delComment(id){
+  if(!confirm('Удалить комментарий?')) return;
+  try{ await Cloud.deleteComment(id); await refreshComments(); }
+  catch(e){ alert('Не удалось: '+(e.message||e)); }
 }
 
 // ── МОДАЛКИ ──────────────────────────────────────────────────────────────────
@@ -609,7 +670,8 @@ export function initUI(){
     filter:(f)=>{ ST.filter=f; saveSettings(); rerender(); },
     tf:(el)=>el.classList.toggle('open'),
     openCity, searchCity, pickCity, geo, closeModal, openNotif,
-    openAccount, signIn: acSignIn, setPass: acSetPass, signOut: acSignOut, syncNow: acSyncNow, saveHandle: acSaveHandle, like: feedLike,
+    openAccount, signIn: acSignIn, setPass: acSetPass, signOut: acSignOut, syncNow: acSyncNow, saveHandle: acSaveHandle,
+    like: feedLike, comments: openComments, sendComment, delComment,
     newEntry, editEntry, addCatch, rmCatch, setW, setRating, saveEntry, delEntry, shareCatch,
     newKit, editKit, kitIcon, kitTarget, addLure, lureQty, rmLure, saveKit, delKit,
     mapView:(v)=>{ ST.mapView=v; MapView.setLayer(v); document.querySelectorAll('.mtoggle button').forEach((b,i)=>b.classList.toggle('on',(i===0)===(v==='satellite'))); },

@@ -199,6 +199,29 @@ export async function myStats() {
   return data;
 }
 
+// ── комментарии к выезду ──
+export async function fetchComments(tripKey) {
+  const c = await client(); if (!c) return [];
+  const { data, error } = await c.from('trip_comments_view').select('*')
+    .eq('trip_key', tripKey).order('created_at', { ascending: true });
+  if (error) throw error;
+  return data || [];
+}
+
+export async function addComment(tripKey, body) {
+  const c = await client(); const u = await currentUser(); if (!c || !u) throw new Error('Войди в аккаунт');
+  body = String(body).trim().slice(0, 500);
+  if (!body) throw new Error('Пустой комментарий');
+  const { error } = await c.from('trip_comments').insert({ trip_key: tripKey, user_id: u.id, body });
+  if (error) throw error;
+}
+
+export async function deleteComment(id) {
+  const c = await client(); const u = await currentUser(); if (!c || !u) throw new Error('Войди в аккаунт');
+  const { error } = await c.from('trip_comments').delete().eq('id', id).eq('user_id', u.id);
+  if (error) throw error;
+}
+
 export async function signOut() {
   try { const c = await client(); if (c) await c.auth.signOut(); } catch (e) {}
 }
