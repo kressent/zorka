@@ -52,3 +52,14 @@ export async function verifyCode(email, token) {
 export async function signOut() {
   try { const c = await client(); if (c) await c.auth.signOut(); } catch (e) {}
 }
+
+// синхронно определить вход по сохранённой сессии (без запроса к серверу)
+export function cachedUser() {
+  try {
+    const raw = localStorage.getItem('zorka_auth');
+    if (!raw) return null;
+    const o = JSON.parse(raw);
+    const u = o.user || (o.currentSession && o.currentSession.user) || (o.session && o.session.user) || null;
+    return (u && u.email) ? { email: u.email } : null;
+  } catch (e) { return null; }
+}

@@ -143,13 +143,16 @@ function renderForecast(){
 
   const ban = ST.city ? Regs.activeBan(Regs.zoneOf(ST.city.name)) : null;
   if (ban) Notify.ensureBan(ban, now.getFullYear());
+  const acct = cloudEnabled() ? Cloud.cachedUser() : null;
   return `${ST.fromCache?'<div class="badge-cache">⚠️ офлайн — данные из кэша</div>':''}
     <div class="wash">
       <div class="mast"><div class="t"><button onclick="Z.openCity()">📍 ${esc(ST.city.name)} <span class="chev">▾</span></button></div>
         <div class="mast-right">
           <div class="mr-icons">
-            ${cloudEnabled()?`<button class="bell acct" onclick="Z.openAccount()" aria-label="Войти в аккаунт">👤</button>`:''}
             <button class="bell" onclick="Z.openNotif()" aria-label="Уведомления">🔔${Notify.unread()?`<span class="ndot">${Notify.unread()}</span>`:''}</button>
+            ${cloudEnabled()?(acct
+              ? `<button class="acct-in" onclick="Z.openAccount()" title="${esc(acct.email)}"><span class="dot-on"></span>${esc(acct.email.split('@')[0])}</button>`
+              : `<button class="bell" onclick="Z.openAccount()" aria-label="Войти в аккаунт">👤</button>`):''}
           </div>
           <span class="d">${ruDateShort(now)}</span>
         </div></div>
