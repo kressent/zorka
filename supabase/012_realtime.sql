@@ -4,14 +4,19 @@
 -- ленте/модалке без перезагрузки страницы. RLS соблюдается (политики read = true).
 -- publication supabase_realtime на Supabase есть по умолчанию.
 
+-- устойчиво к порядку: добавляем только существующие и ещё не добавленные таблицы
 do $$
 begin
-  if not exists (select 1 from pg_publication_tables
-                 where pubname='supabase_realtime' and schemaname='public' and tablename='trip_comments') then
+  if exists (select 1 from information_schema.tables
+             where table_schema='public' and table_name='trip_comments')
+     and not exists (select 1 from pg_publication_tables
+             where pubname='supabase_realtime' and schemaname='public' and tablename='trip_comments') then
     alter publication supabase_realtime add table trip_comments;
   end if;
-  if not exists (select 1 from pg_publication_tables
-                 where pubname='supabase_realtime' and schemaname='public' and tablename='trip_likes') then
+  if exists (select 1 from information_schema.tables
+             where table_schema='public' and table_name='trip_likes')
+     and not exists (select 1 from pg_publication_tables
+             where pubname='supabase_realtime' and schemaname='public' and tablename='trip_likes') then
     alter publication supabase_realtime add table trip_likes;
   end if;
 end $$;
