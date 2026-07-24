@@ -151,9 +151,9 @@ export async function toggleLike(catchId, on) {
 }
 
 // ── профиль рыбака: ник + рейтинг (очки/ранг считает вью angler_stats) ──
-function genHandle(email) {
-  const base = String(email || '').split('@')[0].replace(/[^a-zа-яё0-9_.-]/gi, '').slice(0, 12) || 'Рыбак';
-  return base + '-' + Math.floor(1000 + Math.random() * 9000);
+function genHandle() {
+  // нейтральный ник по умолчанию (без утечки почты); рыбак сам переименует
+  return 'Рыбак-' + Math.floor(1000 + Math.random() * 9000);
 }
 
 // создать профиль с ником, если его ещё нет; вернуть актуальный ник
@@ -162,7 +162,7 @@ export async function ensureProfile(defaultHandle) {
   const u = await currentUser(); if (!u) return null;
   const { data } = await c.from('profiles').select('handle').eq('user_id', u.id).maybeSingle();
   if (data && data.handle) return data.handle;
-  const handle = String(defaultHandle || genHandle(u.email)).slice(0, 24);
+  const handle = String(defaultHandle || genHandle()).slice(0, 24);
   await c.from('profiles').insert({ user_id: u.id, handle }).then(() => {}, () => {});
   return handle;
 }
