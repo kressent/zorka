@@ -29,6 +29,8 @@ export async function currentUser() {
   } catch (e) { return null; }
 }
 
+export async function currentUserId() { const u = await currentUser(); return u ? u.id : null; }
+
 // отправить ссылку для входа на почту (magic link; работает на бесплатном тарифе)
 export async function sendCode(email) {
   const c = await client(); if (!c) throw new Error('Облако не настроено');
@@ -108,13 +110,16 @@ export async function publishCatches(entry, waterName, coords) {
   await c.from('catches').delete().eq('user_id', u.id).like('client_id', entry.id + ':%');
   const cats = (entry.catches || []); if (!cats.length) return; // улова нет — просто убрали старое
   const caughtAt = entry.date ? new Date(entry.date + 'T12:00:00').toISOString() : new Date().toISOString();
+  // место рыбалки важнее города: показываем spot (напр. «Зирган»), город — запасной
+  const place = (entry.spot && entry.spot.trim()) ? entry.spot.trim() : (waterName || null);
   const rows = cats.map((x, i) => ({
     user_id: u.id,
     client_id: entry.id + ':' + i,
+    trip_id: entry.id,                 // метка выезда (одна рыбалка = одна карточка)
     species: x.species,
     weight: (x.weight ?? null),
     caught_at: caughtAt,
-    water_name: waterName || entry.spot || null,
+    water_name: place,
     lat: (coords && coords.lat) || null,
     lon: (coords && coords.lon) || null,
     conditions: entry.forecast || null,
@@ -134,25 +139,26 @@ export async function unpublishEntry(entryId) {
 
 export async function fetchFeed(limit = 40) {
   const c = await client(); if (!c) return [];
-  const { data, error } = await c.from('feed_catches').select('*').order('caught_at', { ascending: false }).limit(limit);
+  const { data, error } = await c.from('feed_trips').select('*').order('caught_at', { ascending: false }).limit(limit);
   if (error) throw error;
   return data || [];
 }
 
+// какие выезды я лайкал (ids — ключи выездов 'owner:trip')
 export async function myLikes(ids) {
   const c = await client(); const u = await currentUser();
   if (!c || !u || !ids.length) return new Set();
-  const { data } = await c.from('catch_likes').select('catch_id').eq('user_id', u.id).in('catch_id', ids);
-  return new Set((data || []).map(r => r.catch_id));
+  const { data } = await c.from('trip_likes').select('trip_key').eq('user_id', u.id).in('trip_key', ids);
+  return new Set((data || []).map(r => r.trip_key));
 }
 
-export async function toggleLike(catchId, on) {
+export async function toggleLike(tripKey, on) {
   const c = await client(); const u = await currentUser(); if (!c || !u) throw new Error('Войди в аккаунт');
   if (on) {
-    const { error } = await c.from('catch_likes').insert({ catch_id: catchId, user_id: u.id });
+    const { error } = await c.from('trip_likes').insert({ trip_key: tripKey, user_id: u.id });
     if (error && !String(error.message || '').toLowerCase().includes('duplicate')) throw error;
   } else {
-    const { error } = await c.from('catch_likes').delete().eq('catch_id', catchId).eq('user_id', u.id);
+    const { error } = await c.from('trip_likes').delete().eq('trip_key', tripKey).eq('user_id', u.id);
     if (error) throw error;
   }
 }

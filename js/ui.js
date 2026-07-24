@@ -310,25 +310,34 @@ async function loadFeed(){
   try{
     const items=await Cloud.fetchFeed(40);
     if(!items.length){ box.innerHTML=feedEmpty('Пока пусто. Запиши улов в дневнике — и он появится тут (для всех, место огрублённо).'); return; }
-    const liked = Cloud.cachedUser() ? await Cloud.myLikes(items.map(i=>i.id)) : new Set();
-    box.innerHTML = items.map(it=>feedCard(it, liked.has(it.id))).join('');
+    const me = Cloud.cachedUser() ? await Cloud.currentUserId() : null;
+    const liked = me ? await Cloud.myLikes(items.map(i=>i.id)) : new Set();
+    box.innerHTML = items.map(it=>feedCard(it, liked.has(it.id), me)).join('');
   }catch(e){ box.innerHTML=feedEmpty('Не удалось загрузить ленту. '+(e.message||'')); }
 }
 function feedEmpty(msg){ return `<div class="empty"><div class="ei">🎣</div><p>${esc(msg)}</p></div>`; }
-function feedCard(it, mine){
-  const f=byId(it.species); const nm=f?f.n:esc(it.species); const col=f?f.col:'#7c8a80';
+// одна карточка = один выезд (рыбалка) со списком рыбы
+function feedCard(it, mine, myId){
   const d=it.caught_at?new Date(it.caught_at):null;
   const dl=d?`${d.getDate()} ${MONTHS_GEN[d.getMonth()]}`:'';
-  const wv=fmtW(it.weight); const w=wv?` · ${wv}`:'';
+  const fish=(it.fish||[]).filter(x=>x&&x.species);
+  const rows=fish.map(x=>{ const f=byId(x.species); const nm=f?f.n:esc(x.species); const col=f?f.col:'#7c8a80'; const wv=fmtW(x.weight);
+    return `<div class="tc-fish"><span class="dot" style="background:${col}"></span><span class="tc-fn">${nm}</span><span class="tc-fw">${wv||'—'}</span></div>`; }).join('');
   const sc=it.forecast_score!=null?`<span class="feed-badge">прогноз был ${Number(it.forecast_score).toFixed(1)}/5 ✅</span>`:'';
   const rk=anglerRank(it.points);
   const who=`<div class="fc-who"><span class="fc-name">${esc(it.handle||'Рыбак')}</span>${rankFish(rk.n)}<span class="fc-title">${rk.t}</span></div>`;
+  const place=it.water_name?esc(it.water_name):'';
+  const head=`<div class="tc-head">${place?`<b>${place}</b>`:''}${(place&&dl)?'<span class="tc-dot">·</span>':''}${dl?`<span>${dl}</span>`:''}</div>`;
+  const isMine = myId && it.user_id===myId;
+  const like = isMine
+    ? `<span class="tc-own">твой улов</span>`
+    : `<button class="like-btn${mine?' on':''}" onclick="Z.like('${it.id}',this)">❤ <span class="lc">${it.likes||0}</span></button>`;
   return `<div class="feed-card">
     ${who}
-    <div class="fc-top"><span class="dot" style="background:${col}"></span>
-      <div style="flex:1;min-width:0"><b>${nm}${w}</b><div class="fc-sub">${it.water_name?esc(it.water_name)+' · ':''}${dl}</div></div></div>
+    ${head}
+    <div class="tc-list">${rows||'<div class="tc-fish"><span class="tc-fn" style="color:var(--slate)">Был на рыбалке</span></div>'}</div>
     ${sc?`<div class="fc-badges">${sc}</div>`:''}
-    <button class="like-btn${mine?' on':''}" onclick="Z.like('${it.id}',this)">❤ <span class="lc">${it.likes||0}</span></button>
+    ${like}
   </div>`;
 }
 async function feedLike(id, btn){
