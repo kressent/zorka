@@ -24,13 +24,12 @@ export function addNotif(n) {
 // уведомление о нерестовом запрете — только когда он реально действует (по региону+датам)
 export function ensureBan(ban, year) {
   if (!ban) return;
-  addNotif({
-    id: `ban-${year}-${ban.zone}`,
-    kind: 'ban',
-    title: '🚫 Нерестовый запрет',
-    body: `${ban.name}: запрет с ${ban.fromLabel} по ${ban.toLabel}. ${ban.rules} `
-      + 'Проверь актуальные официальные правила своего района — даты и границы участков могут отличаться.',
-  });
+  const id = ban.generic ? `ban-${year}-generic` : `ban-${year}-${ban.zone}`;
+  const title = ban.generic ? '🚫 Нерестовые ограничения (сезон)' : '🚫 Нерестовый запрет';
+  const body = ban.generic
+    ? `Примерно с ${ban.fromLabel} по ${ban.toLabel} в большинстве регионов РФ действует нерестовый запрет. ${ban.rules} Точные даты и правила твоего района — на сайте рыбоохраны.`
+    : `${ban.name}: запрет с ${ban.fromLabel} по ${ban.toLabel}. ${ban.rules} Проверь актуальные официальные правила своего района — даты и границы участков могут отличаться.`;
+  addNotif({ id, kind: 'ban', title, body });
 }
 
 // приветствие при первом запуске (добавляется один раз)
