@@ -94,6 +94,53 @@ export async function pushData(obj) {
   return now;
 }
 
+// ── сообщество: публикация уловов, лента, лайки ──
+export async function publishCatches(entry, waterName, coords) {
+  const c = await client(); if (!c) return; const u = await currentUser(); if (!u) return;
+  const cats = (entry.catches || []); if (!cats.length) return;
+  const caughtAt = entry.date ? new Date(entry.date + 'T12:00:00').toISOString() : new Date().toISOString();
+  const rows = cats.map((x, i) => ({
+    user_id: u.id,
+    client_id: entry.id + ':' + i,
+    species: x.species,
+    weight: (x.weight ?? null),
+    caught_at: caughtAt,
+    water_name: waterName || entry.spot || null,
+    lat: (coords && coords.lat) || null,
+    lon: (coords && coords.lon) || null,
+    conditions: entry.forecast || null,
+    forecast_score: (entry.forecast && entry.forecast.score != null) ? entry.forecast.score : null,
+    is_public: true,
+  }));
+  const { error } = await c.from('catches').upsert(rows, { onConflict: 'user_id,client_id' });
+  if (error) throw error;
+}
+
+export async function fetchFeed(limit = 40) {
+  const c = await client(); if (!c) return [];
+  const { data, error } = await c.from('feed_catches').select('*').order('caught_at', { ascending: false }).limit(limit);
+  if (error) throw error;
+  return data || [];
+}
+
+export async function myLikes(ids) {
+  const c = await client(); const u = await currentUser();
+  if (!c || !u || !ids.length) return new Set();
+  const { data } = await c.from('catch_likes').select('catch_id').eq('user_id', u.id).in('catch_id', ids);
+  return new Set((data || []).map(r => r.catch_id));
+}
+
+export async function toggleLike(catchId, on) {
+  const c = await client(); const u = await currentUser(); if (!c || !u) throw new Error('Войди в аккаунт');
+  if (on) {
+    const { error } = await c.from('catch_likes').insert({ catch_id: catchId, user_id: u.id });
+    if (error && !String(error.message || '').toLowerCase().includes('duplicate')) throw error;
+  } else {
+    const { error } = await c.from('catch_likes').delete().eq('catch_id', catchId).eq('user_id', u.id);
+    if (error) throw error;
+  }
+}
+
 export async function signOut() {
   try { const c = await client(); if (c) await c.auth.signOut(); } catch (e) {}
 }

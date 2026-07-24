@@ -60,7 +60,7 @@ ST.weather = synth();
 
 check('Z API определён', () => assert.ok(window.Z && typeof window.Z.tab === 'function'));
 
-for (const t of ['forecast','diary','map','tackle']) {
+for (const t of ['forecast','diary','feed','map','tackle']) {
   check('экран "' + t + '" рисуется', () => {
     ST.tab = t; rerender();
     const html = els.get('main')._html;

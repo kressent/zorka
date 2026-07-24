@@ -54,6 +54,7 @@ function hourlyBarsHTML(fc){
 const NAV = [
   ['forecast','Прогноз','<path d="M3 15c3 0 3-3 6-3s3 3 6 3 3-3 6-3M3 9c3 0 3-3 6-3s3 3 6 3 3-3 6-3"/>'],
   ['diary','Дневник','<path d="M4 5a2 2 0 0 1 2-2h13v18H6a2 2 0 0 1-2-2z"/><path d="M9 3v18"/>'],
+  ['feed','Лента','<circle cx="9" cy="8" r="3"/><path d="M3.5 20a5.5 5.5 0 0 1 11 0"/><path d="M16 6a3 3 0 0 1 0 6"/><path d="M20.5 20a5.5 5.5 0 0 0-4-5.3"/>'],
   ['map','Карта','<path d="M12 21s-6-5.5-6-10a6 6 0 0 1 12 0c0 4.5-6 10-6 10z"/><circle cx="12" cy="11" r="2"/>'],
   ['tackle','Снасти','<path d="M4 7h16v13H4z"/><path d="M9 7V4h6v3"/>'],
 ];
@@ -68,6 +69,7 @@ export function rerender(){
   const main = $('main'); if(!main) return;
   if(ST.tab==='forecast') main.innerHTML = renderForecast();
   else if(ST.tab==='diary') main.innerHTML = renderDiary();
+  else if(ST.tab==='feed') main.innerHTML = renderFeed();
   else if(ST.tab==='map') main.innerHTML = renderMap();
   else main.innerHTML = renderTackle();
   $('tabbar').innerHTML = navHTML();
@@ -275,6 +277,45 @@ function renderTackle(){
     <button class="act" onclick="Z.newKit()">＋ Добавить комплект</button><div style="height:10px"></div></div>`;
 }
 
+// ── ЭКРАН: ЛЕНТА УЛОВОВ ──────────────────────────────────────────────────────
+function renderFeed(){
+  setTimeout(loadFeed, 0);
+  return `<div class="pad"><div class="mast"><span class="t">Лента уловов</span><span class="d">от рыбаков</span></div>
+    <p class="honesty" style="border:none;padding-top:8px;margin-top:8px">Реальные уловы рыбаков. Ставь ❤️ и смотри, что и на что берёт. Чем больше нас — тем точнее прогноз. Места показываются огрублённо.</p>
+    <div id="feedBody"><div class="center" style="min-height:180px"><div class="loader"></div></div></div><div style="height:10px"></div></div>`;
+}
+async function loadFeed(){
+  const box=$('feedBody'); if(!box) return;
+  if(!cloudEnabled()){ box.innerHTML=feedEmpty('Облако не настроено.'); return; }
+  try{
+    const items=await Cloud.fetchFeed(40);
+    if(!items.length){ box.innerHTML=feedEmpty('Пока пусто. Запиши улов в дневнике — и он появится тут (для всех, место огрублённо).'); return; }
+    const liked = Cloud.cachedUser() ? await Cloud.myLikes(items.map(i=>i.id)) : new Set();
+    box.innerHTML = items.map(it=>feedCard(it, liked.has(it.id))).join('');
+  }catch(e){ box.innerHTML=feedEmpty('Не удалось загрузить ленту. '+(e.message||'')); }
+}
+function feedEmpty(msg){ return `<div class="empty"><div class="ei">🎣</div><p>${esc(msg)}</p></div>`; }
+function feedCard(it, mine){
+  const f=byId(it.species); const nm=f?f.n:esc(it.species); const col=f?f.col:'#7c8a80';
+  const d=it.caught_at?new Date(it.caught_at):null;
+  const dl=d?`${d.getDate()} ${MONTHS_GEN[d.getMonth()]}`:'';
+  const w=it.weight!=null?` · ${Number(it.weight).toFixed(2).replace('.',',')} кг`:'';
+  const sc=it.forecast_score!=null?`<span class="feed-badge">прогноз был ${Number(it.forecast_score).toFixed(1)}/5 ✅</span>`:'';
+  return `<div class="feed-card">
+    <div class="fc-top"><span class="dot" style="background:${col}"></span>
+      <div style="flex:1;min-width:0"><b>${nm}${w}</b><div class="fc-sub">${it.water_name?esc(it.water_name)+' · ':''}${dl}</div></div></div>
+    ${sc?`<div class="fc-badges">${sc}</div>`:''}
+    <button class="like-btn${mine?' on':''}" onclick="Z.like('${it.id}',this)">❤ <span class="lc">${it.likes||0}</span></button>
+  </div>`;
+}
+async function feedLike(id, btn){
+  if(!Cloud.cachedUser()){ toast('Войди в аккаунт, чтобы ставить лайки'); openAccount(); return; }
+  const on=!btn.classList.contains('on'); const lc=btn.querySelector('.lc'); const cur=Number(lc.textContent)||0;
+  btn.classList.toggle('on',on); lc.textContent=on?cur+1:Math.max(0,cur-1);
+  try{ await Cloud.toggleLike(id,on); }
+  catch(e){ btn.classList.toggle('on',!on); lc.textContent=cur; toast('Не удалось: '+(e.message||e)); }
+}
+
 // ── МОДАЛКИ ──────────────────────────────────────────────────────────────────
 function openModal(html){
   closeModal();
@@ -411,7 +452,10 @@ function saveEntry(){
     try{ const idx=todayIndex(ST.weather); const fc=computeForecast(ST.weather,{filter:'all',todayIdx:idx});
       draft.forecast={maxT:fc.conditions.maxT,minT:fc.conditions.minT,avgP:fc.conditions.avgP,pdir:fc.conditions.pdir,wt:fc.conditions.wt,score:fc.day.score}; }catch(e){}
   }
-  Diary.upsertEntry(draft); draft=null; closeModal(); rerender(); Sync.pushSoon();
+  const saved = draft;
+  Diary.upsertEntry(saved); draft=null; closeModal(); rerender(); Sync.pushSoon();
+  if(cloudEnabled() && Cloud.cachedUser())
+    Cloud.publishCatches(saved, ST.city?ST.city.name:'', ST.city?{lat:ST.city.lat,lon:ST.city.lon}:{}).catch(e=>console.warn('publish:',e.message));
 }
 function delEntry(id){ if(confirm('Удалить запись?')){ Diary.deleteEntry(id); draft=null; closeModal(); rerender(); Sync.pushSoon(); } }
 async function shareCatch(id){
@@ -498,7 +542,7 @@ export function initUI(){
     filter:(f)=>{ ST.filter=f; saveSettings(); rerender(); },
     tf:(el)=>el.classList.toggle('open'),
     openCity, searchCity, pickCity, geo, closeModal, openNotif,
-    openAccount, signIn: acSignIn, setPass: acSetPass, signOut: acSignOut, syncNow: acSyncNow,
+    openAccount, signIn: acSignIn, setPass: acSetPass, signOut: acSignOut, syncNow: acSyncNow, like: feedLike,
     newEntry, editEntry, addCatch, rmCatch, setW, setRating, saveEntry, delEntry, shareCatch,
     newKit, editKit, kitIcon, kitTarget, addLure, lureQty, rmLure, saveKit, delKit,
     mapView:(v)=>{ ST.mapView=v; rerender(); }, newPlace, placeGeo, savePlace, delPlace,
