@@ -14,6 +14,7 @@ import * as Notify from './notify.js';
 import * as Regs from './regulations.js';
 import * as Cloud from './cloud.js';
 import * as Sync from './sync.js';
+import * as MapView from './mapview.js';
 import { cloudEnabled } from './config.js';
 
 // ── помощники ────────────────────────────────────────────────────────────────
@@ -243,18 +244,19 @@ function schemeSVG(){
 }
 function renderMap(){
   const places = getPlaces();
-  const markers = `<div class="mk" style="left:47%;top:40%"><span class="nm">Перекат</span><span class="pin"></span></div>
-    <div class="mk" style="left:25%;top:57%"><span class="nm">Затон</span><span class="pin"></span></div>`;
+  const center = ST.city ? {lat:ST.city.lat, lon:ST.city.lon} : {lat:55.75, lon:37.62};
+  setTimeout(()=>MapView.initMap('mapEl', center, places, (la,lo)=>Z.mapPick(la,lo), ST.mapView), 30);
   const spots = places.length ? places.map((p,i)=>`<div class="spot"><span class="sp-pin"></span>
-      <div class="sp-i"><b>${esc(p.name)}</b>${p.depth?`<div class="dn">🌊 ${esc(p.depth)}</div>`:''}<div class="mt">${p.country?esc(p.country)+' · ':''}${p.note?esc(p.note):'сохранённое место'}</div></div>
+      <div class="sp-i"><b>${esc(p.name)}</b>${p.depth?`<div class="dn">🌊 ${esc(p.depth)}</div>`:''}<div class="mt">${p.note?esc(p.note):'сохранённое место'}</div></div>
       <button class="rm" style="background:none;border:none;color:var(--bad);font-size:16px;cursor:pointer" onclick="Z.delPlace(${i})">✕</button></div>`).join('')
-    : `<div class="empty"><div class="ei">📍</div><p>Пока нет отмеченных мест. Добавь точку — можно приписать глубину и заметку («яма 4 м, коряги»).</p></div>`;
+    : `<div class="empty"><div class="ei">📍</div><p>Пока нет отмеченных мест. Нажми на карту выше, чтобы поставить точку (можно из дома), или кнопку ниже.</p></div>`;
 
   return `<div class="pad"><div class="mast"><span class="t">Мои места</span><span class="d">${places.length} точек</span></div>
-    <div class="mtoggle"><button class="${ST.mapView==='satellite'?'on':''}" onclick="Z.mapView('satellite')">Спутник</button><button class="${ST.mapView==='scheme'?'on':''}" onclick="Z.mapView('scheme')">Схема</button></div>
-    <div class="chart">${ST.mapView==='satellite'?aerialSVG():schemeSVG()}${markers}<span class="cap">${ST.mapView==='satellite'?'спутник · пример (в приложении — Яндекс Карты)':'схема'}</span></div>
+    <div class="mtoggle"><button class="${ST.mapView==='satellite'?'on':''}" onclick="Z.mapView('satellite')">Спутник</button><button class="${ST.mapView!=='satellite'?'on':''}" onclick="Z.mapView('scheme')">Схема</button></div>
+    <div id="mapEl" style="height:300px;margin-top:8px;border:1px solid var(--rule);background:#dfe6e0;z-index:0"></div>
+    <p style="font-size:11.5px;color:var(--slate);margin-top:6px">📍 Нажми на карту, чтобы поставить метку места — хоть из дома.</p>
     ${spots}
-    <button class="act" onclick="Z.newPlace()">＋ Добавить место</button><div style="height:10px"></div></div>`;
+    <button class="act" onclick="Z.newPlace()">＋ Добавить по геолокации</button><div style="height:10px"></div></div>`;
 }
 
 // ── ЭКРАН: СНАСТИ ────────────────────────────────────────────────────────────
@@ -506,15 +508,17 @@ function saveKit(){ syncKit(); if(!kitDraft.name){alert('Введи назван
 function delKit(id){ if(confirm('Удалить комплект?')){ Tackle.deleteKit(id); kitDraft=null; closeModal(); rerender(); Sync.pushSoon(); } }
 
 // места
-function newPlace(){
+function newPlace(coords){
+  const picked = coords && coords.lat != null;
+  placeCoords = picked ? {lat:coords.lat, lon:coords.lon} : (ST.city ? {lat:ST.city.lat,lon:ST.city.lon} : null);
+  const label = picked ? `точка на карте (${coords.lat.toFixed(4)}, ${coords.lon.toFixed(4)})` : (ST.city?esc(ST.city.name):'—');
   openModal(`<h3>Новое место</h3>
     <div class="field"><label>Название</label><input id="p_name" placeholder="напр. Ивановская яма"></div>
     <div class="field"><label>Глубина / рельеф (по желанию)</label><input id="p_depth" placeholder="напр. яма 4 м, коряги, свал"></div>
     <div class="field"><label>Заметка</label><input id="p_note" placeholder="как подъехать, что ловится…"></div>
-    <button class="act" style="border-color:var(--jade);color:var(--jade)" onclick="Z.placeGeo()">📍 Взять мои координаты</button>
+    ${picked?'':'<button class="act" style="border-color:var(--jade);color:var(--jade)" onclick="Z.placeGeo()">📍 Взять мои координаты</button>'}
     <button class="act" onclick="Z.savePlace()">Сохранить место</button>
-    <p id="p_coords" style="font-size:11px;color:var(--slate);margin-top:8px">Координаты: ${ST.city?esc(ST.city.name):'—'}</p>`);
-  placeCoords = ST.city ? {lat:ST.city.lat,lon:ST.city.lon} : null;
+    <p id="p_coords" style="font-size:11px;color:var(--slate);margin-top:8px">Координаты: ${label}</p>`);
 }
 let placeCoords = null;
 async function placeGeo(){ try{ placeCoords=await geolocate(); const el=$('p_coords'); if(el)el.textContent='Координаты: моя геолокация ✓'; }catch(e){ alert('Не удалось получить геолокацию'); } }
@@ -545,6 +549,7 @@ export function initUI(){
     openAccount, signIn: acSignIn, setPass: acSetPass, signOut: acSignOut, syncNow: acSyncNow, like: feedLike,
     newEntry, editEntry, addCatch, rmCatch, setW, setRating, saveEntry, delEntry, shareCatch,
     newKit, editKit, kitIcon, kitTarget, addLure, lureQty, rmLure, saveKit, delKit,
-    mapView:(v)=>{ ST.mapView=v; rerender(); }, newPlace, placeGeo, savePlace, delPlace,
+    mapView:(v)=>{ ST.mapView=v; MapView.setLayer(v); document.querySelectorAll('.mtoggle button').forEach((b,i)=>b.classList.toggle('on',(i===0)===(v==='satellite'))); },
+    mapPick:(la,lo)=>newPlace({lat:la,lon:lo}), newPlace, placeGeo, savePlace, delPlace,
   };
 }
