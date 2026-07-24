@@ -76,6 +76,24 @@ export async function setPassword(password) {
   if (error) throw error;
 }
 
+// ── синхронизация данных (дневник/места/снасти одним документом) ──
+export async function pullData() {
+  const c = await client(); if (!c) return null;
+  const u = await currentUser(); if (!u) return null;
+  const { data, error } = await c.from('user_data').select('data,updated_at').eq('user_id', u.id).maybeSingle();
+  if (error) throw error;
+  return data; // { data, updated_at } | null
+}
+
+export async function pushData(obj) {
+  const c = await client(); if (!c) return null;
+  const u = await currentUser(); if (!u) return null;
+  const now = new Date().toISOString();
+  const { error } = await c.from('user_data').upsert({ user_id: u.id, data: obj, updated_at: now });
+  if (error) throw error;
+  return now;
+}
+
 export async function signOut() {
   try { const c = await client(); if (c) await c.auth.signOut(); } catch (e) {}
 }

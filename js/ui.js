@@ -13,6 +13,7 @@ import { makeCatchCard, shareCard } from './catchcard.js';
 import * as Notify from './notify.js';
 import * as Regs from './regulations.js';
 import * as Cloud from './cloud.js';
+import * as Sync from './sync.js';
 import { cloudEnabled } from './config.js';
 
 // ── помощники ────────────────────────────────────────────────────────────────
@@ -297,7 +298,9 @@ async function openAccount(){
         <input id="ac_setpass" type="password" autocomplete="new-password" placeholder="новый пароль, минимум 6"></div>
       <button class="act" onclick="Z.setPass()">Сохранить пароль</button>
       <p style="font-size:12px;color:var(--slate);margin-top:8px">Дальше на телефоне/айфоне входи этой же почтой и паролем — без писем.</p>
-      <button class="act" style="border-color:var(--bad);color:var(--bad);margin-top:8px" onclick="Z.signOut()">Выйти</button>`;
+      <button class="act" style="border-color:var(--jade);color:var(--jade);margin-top:12px" onclick="Z.syncNow()">🔄 Синхронизировать сейчас</button>
+      <p style="font-size:11.5px;color:var(--slate);margin-top:6px">Дневник, места и снасти синхронизируются сами. Кнопка — если хочешь обновить вручную.</p>
+      <button class="act" style="border-color:var(--bad);color:var(--bad);margin-top:10px" onclick="Z.signOut()">Выйти</button>`;
   } else {
     s.innerHTML = accountEmailStep();
   }
@@ -315,7 +318,7 @@ async function acSignIn(){
   if(!authEmail || !authEmail.includes('@')){ alert('Введи корректную почту'); return; }
   if(!pass || pass.length<6){ alert('Пароль — минимум 6 символов'); return; }
   const s=document.querySelector('#modal .sheet'); const btn=s&&s.querySelector('.act'); if(btn) btn.textContent='Вхожу…';
-  try{ await Cloud.signInOrUp(authEmail, pass); closeModal(); toast('Вход выполнен — облако подключено ☁️'); rerender(); }
+  try{ await Cloud.signInOrUp(authEmail, pass); closeModal(); toast('Вход выполнен — облако подключено ☁️'); rerender(); Sync.syncOnLogin(); }
   catch(e){ alert(e.message||String(e)); if(btn) btn.textContent='Войти'; }
 }
 async function acSetPass(){
@@ -326,6 +329,10 @@ async function acSetPass(){
   catch(e){ alert('Не удалось: '+(e.message||e)); if(btn) btn.textContent='Сохранить пароль'; }
 }
 async function acSignOut(){ await Cloud.signOut(); closeModal(); toast('Вышли из облака'); rerender(); }
+async function acSyncNow(){
+  try{ toast('Синхронизирую…'); await Sync.syncNow(); closeModal(); toast('Синхронизировано ☁️'); rerender(); }
+  catch(e){ alert('Не удалось: '+(e.message||e)); }
+}
 
 // центр уведомлений
 function openNotif(){
@@ -404,9 +411,9 @@ function saveEntry(){
     try{ const idx=todayIndex(ST.weather); const fc=computeForecast(ST.weather,{filter:'all',todayIdx:idx});
       draft.forecast={maxT:fc.conditions.maxT,minT:fc.conditions.minT,avgP:fc.conditions.avgP,pdir:fc.conditions.pdir,wt:fc.conditions.wt,score:fc.day.score}; }catch(e){}
   }
-  Diary.upsertEntry(draft); draft=null; closeModal(); rerender();
+  Diary.upsertEntry(draft); draft=null; closeModal(); rerender(); Sync.pushSoon();
 }
-function delEntry(id){ if(confirm('Удалить запись?')){ Diary.deleteEntry(id); draft=null; closeModal(); rerender(); } }
+function delEntry(id){ if(confirm('Удалить запись?')){ Diary.deleteEntry(id); draft=null; closeModal(); rerender(); Sync.pushSoon(); } }
 async function shareCatch(id){
   const e = Diary.getEntries().find(x => x.id === id); if (!e) return;
   try {
@@ -451,8 +458,8 @@ function addLure(){ syncKit(); const n=$('l_name').value.trim(); if(!n){alert('�
   kitDraft.lures=kitDraft.lures||[]; kitDraft.lures.push({name:n,type:$('l_type').value.trim(),color:'',qty:parseInt($('l_qty').value)||0,minQty:parseInt($('l_min').value)||1}); renderKit(); }
 function lureQty(i,d){ kitDraft.lures[i].qty=Math.max(0,(kitDraft.lures[i].qty||0)+d); renderKit(); }
 function rmLure(i){ kitDraft.lures.splice(i,1); renderKit(); }
-function saveKit(){ syncKit(); if(!kitDraft.name){alert('Введи название комплекта');return;} Tackle.upsertKit(kitDraft); kitDraft=null; closeModal(); rerender(); }
-function delKit(id){ if(confirm('Удалить комплект?')){ Tackle.deleteKit(id); kitDraft=null; closeModal(); rerender(); } }
+function saveKit(){ syncKit(); if(!kitDraft.name){alert('Введи название комплекта');return;} Tackle.upsertKit(kitDraft); kitDraft=null; closeModal(); rerender(); Sync.pushSoon(); }
+function delKit(id){ if(confirm('Удалить комплект?')){ Tackle.deleteKit(id); kitDraft=null; closeModal(); rerender(); Sync.pushSoon(); } }
 
 // места
 function newPlace(){
@@ -471,13 +478,15 @@ function savePlace(){
   const name=$('p_name').value.trim(); if(!name){alert('Введи название');return;}
   const c = placeCoords || (ST.city?{lat:ST.city.lat,lon:ST.city.lon}:{lat:0,lon:0});
   addPlace({name, depth:$('p_depth').value.trim(), note:$('p_note').value.trim(), lat:c.lat, lon:c.lon, country:''});
-  closeModal(); rerender();
+  closeModal(); rerender(); Sync.pushSoon();
 }
-function delPlace(i){ if(confirm('Удалить место?')){ removePlace(i); rerender(); } }
+function delPlace(i){ if(confirm('Удалить место?')){ removePlace(i); rerender(); Sync.pushSoon(); } }
 
 // ── экспорт API для inline-обработчиков ──────────────────────────────────────
 export function initUI(){
   Notify.ensureWelcome();
+  Sync.onSynced(() => rerender());
+  if (cloudEnabled() && Cloud.cachedUser()) Sync.syncOnLogin();
   // возврат по ссылке из письма: supabase кладёт токен в hash — примем сессию
   if (cloudEnabled() && window.location && /access_token|error_code/.test(window.location.hash || '')) {
     Cloud.currentUser().then(u => {
@@ -489,7 +498,7 @@ export function initUI(){
     filter:(f)=>{ ST.filter=f; saveSettings(); rerender(); },
     tf:(el)=>el.classList.toggle('open'),
     openCity, searchCity, pickCity, geo, closeModal, openNotif,
-    openAccount, signIn: acSignIn, setPass: acSetPass, signOut: acSignOut,
+    openAccount, signIn: acSignIn, setPass: acSetPass, signOut: acSignOut, syncNow: acSyncNow,
     newEntry, editEntry, addCatch, rmCatch, setW, setRating, saveEntry, delEntry, shareCatch,
     newKit, editKit, kitIcon, kitTarget, addLure, lureQty, rmLure, saveKit, delKit,
     mapView:(v)=>{ ST.mapView=v; rerender(); }, newPlace, placeGeo, savePlace, delPlace,
