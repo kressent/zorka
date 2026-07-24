@@ -105,7 +105,7 @@ export function scoreFish(fish, ctx) {
   if (mi === undefined) return { sc: 0, factors: [] };
   const factors = [];
   if (fish.sp && fish.sp.indexOf(ctx.month) >= 0)
-    return { sc: 0, factors: [{ tx: 'нерест — запрет', tp: 'bad' }] };
+    return { sc: 0, factors: [{ tx: 'нерест', tp: 'bad' }] };
 
   let s = fish.m[mi];
   const wt = ctx.wt;

@@ -11,6 +11,7 @@ import * as Diary from './diary.js';
 import * as Tackle from './tackle.js';
 import { makeCatchCard, shareCard } from './catchcard.js';
 import * as Notify from './notify.js';
+import * as Regs from './regulations.js';
 import * as Cloud from './cloud.js';
 import { cloudEnabled } from './config.js';
 
@@ -121,7 +122,7 @@ function renderForecast(){
         <div class="fn"><b>${f.n}</b><span>${esc(lure)}</span></div>
         ${bars(f.sc)}<span class="chev">▾</span></div>
       <div class="fbody">
-        ${spawn?`<div class="spawn-warn">⚠️ Период нереста — ловля ограничена/запрещена</div>`:''}
+        ${spawn?`<div class="spawn-warn">⚠️ Период нереста — рыба почти не кормится</div>`:''}
         ${f.factors.length?`<div class="factors">${f.factors.map(x=>`<span class="ftag ${x.tp}">${esc(x.tx)}</span>`).join('')}</div>`:''}
         <div class="detail-grid"><div class="dg"><div class="k">⏰ Время</div><div class="v">${esc(f.ti)}</div></div>
           <div class="dg"><div class="k">📏 Глубина</div><div class="v">${esc(f.dp)}</div></div></div>
@@ -140,15 +141,14 @@ function renderForecast(){
       <span class="dsc" style="color:${col}">${u.score.toFixed(1)}</span></div>`;
   }).join('');
 
-  const month = now.getMonth()+1;
-  const spawning = SPECIES.filter(f => f.sp && f.sp.includes(month));
-  Notify.ensureSpawn(spawning, month, now.getFullYear());
+  const ban = ST.city ? Regs.activeBan(Regs.zoneOf(ST.city.name)) : null;
+  if (ban) Notify.ensureBan(ban, now.getFullYear());
   return `${ST.fromCache?'<div class="badge-cache">⚠️ офлайн — данные из кэша</div>':''}
     <div class="wash">
       <div class="mast"><div class="t"><button onclick="Z.openCity()">📍 ${esc(ST.city.name)} <span class="chev">▾</span></button></div>
         <div class="mast-right">
           <div class="mr-icons">
-            ${cloudEnabled()?`<button class="bell" onclick="Z.openAccount()" aria-label="Аккаунт">☁️</button>`:''}
+            ${cloudEnabled()?`<button class="bell acct" onclick="Z.openAccount()" aria-label="Войти в аккаунт">👤</button>`:''}
             <button class="bell" onclick="Z.openNotif()" aria-label="Уведомления">🔔${Notify.unread()?`<span class="ndot">${Notify.unread()}</span>`:''}</button>
           </div>
           <span class="d">${ruDateShort(now)}</span>
@@ -466,6 +466,7 @@ function delPlace(i){ if(confirm('Удалить место?')){ removePlace(i);
 
 // ── экспорт API для inline-обработчиков ──────────────────────────────────────
 export function initUI(){
+  Notify.ensureWelcome();
   // возврат по ссылке из письма: supabase кладёт токен в hash — примем сессию
   if (cloudEnabled() && window.location && /access_token|error_code/.test(window.location.hash || '')) {
     Cloud.currentUser().then(u => {
