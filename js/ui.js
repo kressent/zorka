@@ -298,30 +298,21 @@ async function openAccount(){
 }
 function accountEmailStep(){
   return `<button class="close" onclick="Z.closeModal()">✕</button><h3>Вход в облако</h3>
-    <p style="font-size:12.5px;color:var(--slate);margin:2px 0 10px">Вход по коду из письма — пароль не нужен. Это включит облако: сохранение между устройствами и (дальше) сообщество.</p>
+    <p style="font-size:12.5px;color:var(--slate);margin:2px 0 10px">Вход по ссылке из письма — пароль не нужен. Это включит облако: сохранение между устройствами и (дальше) сообщество.</p>
     <div class="field"><label>Почта</label><input id="ac_email" type="email" inputmode="email" placeholder="you@mail.ru" value="${esc(authEmail)}"></div>
-    <button class="act" onclick="Z.sendCode()">Получить код</button>`;
+    <button class="act" onclick="Z.sendCode()">Получить ссылку</button>`;
 }
-function accountCodeStep(){
-  return `<button class="close" onclick="Z.closeModal()">✕</button><h3>Код из письма</h3>
-    <p style="font-size:12.5px;color:var(--slate);margin:2px 0 10px">Отправили код на <b>${esc(authEmail)}</b>. Впиши его сюда.</p>
-    <div class="field"><label>Код</label><input id="ac_code" inputmode="numeric" autocomplete="one-time-code" placeholder="123456"></div>
-    <button class="act" onclick="Z.verifyCode()">Войти</button>
-    <button class="act" style="border-color:var(--slate);color:var(--slate);margin-top:8px" onclick="Z.openAccount()">Изменить почту</button>`;
+function accountLinkSent(){
+  return `<button class="close" onclick="Z.closeModal()">✕</button><h3>Письмо отправлено 📩</h3>
+    <p style="font-size:13.5px;line-height:1.5">Ссылка для входа отправлена на <b>${esc(authEmail)}</b>.<br>Открой письмо и нажми ссылку — вернёшься сюда уже в аккаунте. (Загляни и в «Спам».)</p>
+    <button class="act" style="border-color:var(--slate);color:var(--slate)" onclick="Z.openAccount()">Ввести другую почту</button>`;
 }
 async function acSendCode(){
   const el=$('ac_email'); if(!el) return; authEmail=el.value.trim();
   if(!authEmail || !authEmail.includes('@')){ alert('Введи корректную почту'); return; }
   const s=document.querySelector('#modal .sheet'); const btn=s&&s.querySelector('.act'); if(btn) btn.textContent='Отправляю…';
-  try{ await Cloud.sendCode(authEmail); if(s) s.innerHTML=accountCodeStep(); }
-  catch(e){ alert('Не удалось отправить код: '+(e.message||e)); if(btn) btn.textContent='Получить код'; }
-}
-async function acVerifyCode(){
-  const el=$('ac_code'); if(!el) return; const code=el.value.trim();
-  if(!code){ alert('Введи код из письма'); return; }
-  const s=document.querySelector('#modal .sheet'); const btn=s&&s.querySelector('.act'); if(btn) btn.textContent='Вхожу…';
-  try{ await Cloud.verifyCode(authEmail, code); closeModal(); toast('Вход выполнен — облако подключено ☁️'); rerender(); }
-  catch(e){ alert('Код не подошёл: '+(e.message||e)); if(btn) btn.textContent='Войти'; }
+  try{ await Cloud.sendCode(authEmail); if(s) s.innerHTML=accountLinkSent(); }
+  catch(e){ alert('Не удалось отправить письмо: '+(e.message||e)); if(btn) btn.textContent='Получить ссылку'; }
 }
 async function acSignOut(){ await Cloud.signOut(); closeModal(); toast('Вышли из облака'); rerender(); }
 
@@ -475,12 +466,18 @@ function delPlace(i){ if(confirm('Удалить место?')){ removePlace(i);
 
 // ── экспорт API для inline-обработчиков ──────────────────────────────────────
 export function initUI(){
+  // возврат по ссылке из письма: supabase кладёт токен в hash — примем сессию
+  if (cloudEnabled() && window.location && /access_token|error_code/.test(window.location.hash || '')) {
+    Cloud.currentUser().then(u => {
+      if (u) { try { history.replaceState(null, '', window.location.pathname); } catch(e){} toast('Вход выполнен — облако подключено ☁️'); rerender(); }
+    }).catch(()=>{});
+  }
   window.Z = {
     tab, reload:()=>loadWeather(),
     filter:(f)=>{ ST.filter=f; saveSettings(); rerender(); },
     tf:(el)=>el.classList.toggle('open'),
     openCity, searchCity, pickCity, geo, closeModal, openNotif,
-    openAccount, sendCode: acSendCode, verifyCode: acVerifyCode, signOut: acSignOut,
+    openAccount, sendCode: acSendCode, signOut: acSignOut,
     newEntry, editEntry, addCatch, rmCatch, setW, setRating, saveEntry, delEntry, shareCatch,
     newKit, editKit, kitIcon, kitTarget, addLure, lureQty, rmLure, saveKit, delKit,
     mapView:(v)=>{ ST.mapView=v; rerender(); }, newPlace, placeGeo, savePlace, delPlace,

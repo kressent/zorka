@@ -29,10 +29,15 @@ export async function currentUser() {
   } catch (e) { return null; }
 }
 
-// отправить код на почту (email OTP)
+// отправить ссылку для входа на почту (magic link; работает на бесплатном тарифе)
 export async function sendCode(email) {
   const c = await client(); if (!c) throw new Error('Облако не настроено');
-  const { error } = await c.auth.signInWithOtp({ email: String(email).trim(), options: { shouldCreateUser: true } });
+  const redirect = (typeof window !== 'undefined' && window.location)
+    ? (window.location.origin + window.location.pathname) : undefined;
+  const { error } = await c.auth.signInWithOtp({
+    email: String(email).trim(),
+    options: { shouldCreateUser: true, emailRedirectTo: redirect },
+  });
   if (error) throw error;
 }
 
