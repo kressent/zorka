@@ -10,6 +10,7 @@ import { CITIES, searchCities, nearestCity, geolocate,
 import * as Diary from './diary.js';
 import * as Tackle from './tackle.js';
 import { makeCatchCard, shareCard } from './catchcard.js';
+import * as Notify from './notify.js';
 
 // ── помощники ────────────────────────────────────────────────────────────────
 const $ = (id) => document.getElementById(id);
@@ -137,14 +138,16 @@ function renderForecast(){
       <span class="dsc" style="color:${col}">${u.score.toFixed(1)}</span></div>`;
   }).join('');
 
-  const month = new Date().getMonth()+1;
+  const month = now.getMonth()+1;
   const spawning = SPECIES.filter(f => f.sp && f.sp.includes(month));
-  const spawnBanner = spawning.length
-    ? `<div class="spawn-banner">🚫 Нерест: ${spawning.map(f=>f.n.toLowerCase()).join(', ')}. Во многих регионах ограничения (одна удочка, без спиннинга и лодки) — проверь местные правила.</div>` : '';
+  Notify.ensureSpawn(spawning, month, now.getFullYear());
   return `${ST.fromCache?'<div class="badge-cache">⚠️ офлайн — данные из кэша</div>':''}
     <div class="wash">
       <div class="mast"><div class="t"><button onclick="Z.openCity()">📍 ${esc(ST.city.name)} <span class="chev">▾</span></button></div>
-        <span class="d">${ruDateShort(now)}</span></div>
+        <div class="mast-right">
+          <button class="bell" onclick="Z.openNotif()" aria-label="Уведомления">🔔${Notify.unread()?`<span class="ndot">${Notify.unread()}</span>`:''}</button>
+          <span class="d">${ruDateShort(now)}</span>
+        </div></div>
       <div class="today">
         <div class="k">Сегодня у воды</div>
         <div class="row"><span class="big">${Math.round(ST.weather.hourly.temperature_2m[idx*24+now.getHours()] ?? c.maxT)}°</span>
@@ -155,7 +158,6 @@ function renderForecast(){
     </div>
     <svg class="wave" viewBox="0 0 340 22" preserveAspectRatio="none"><path d="M0,12 C60,3 110,20 170,12 C230,4 280,20 340,10 L340,0 L0,0 Z" fill="#EFE9DB"/></svg>
     <div class="body">
-      ${spawnBanner}
       <div class="seg">${FILTERS.map(([id,l])=>`<button class="${ST.filter===id?'on':''}" onclick="Z.filter('${id}')">${l}</button>`).join('')}</div>
       <div class="alm"><div class="ah"><span>Окна клёва</span><b>${winLabel}</b></div>
         <div class="track">${bands}<div class="now" style="left:${nowFrac}%"></div></div>
@@ -273,6 +275,17 @@ function openModal(html){
   document.body.appendChild(m);
 }
 function closeModal(){ const m=$('modal'); if(m) m.remove(); }
+
+// центр уведомлений
+function openNotif(){
+  const items = Notify.getNotifs();
+  const body = items.length
+    ? items.map(n=>`<div class="notif${n.read?'':' unread'}"><div class="nt">${esc(n.title)}</div><div class="nb">${esc(n.body)}</div></div>`).join('')
+    : `<div class="empty"><div class="ei">🔔</div><p>Пока уведомлений нет. Здесь будут запреты (нерест), жор и важное по твоему водоёму.</p></div>`;
+  openModal(`<h3>Уведомления</h3>${body}`);
+  Notify.markAllRead();
+  rerender();
+}
 
 // город
 function openCity(){
@@ -417,7 +430,7 @@ export function initUI(){
     tab, reload:()=>loadWeather(),
     filter:(f)=>{ ST.filter=f; saveSettings(); rerender(); },
     tf:(el)=>el.classList.toggle('open'),
-    openCity, searchCity, pickCity, geo, closeModal,
+    openCity, searchCity, pickCity, geo, closeModal, openNotif,
     newEntry, editEntry, addCatch, rmCatch, setW, setRating, saveEntry, delEntry, shareCatch,
     newKit, editKit, kitIcon, kitTarget, addLure, lureQty, rmLure, saveKit, delKit,
     mapView:(v)=>{ ST.mapView=v; rerender(); }, newPlace, placeGeo, savePlace, delPlace,

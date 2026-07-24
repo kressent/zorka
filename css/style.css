@@ -246,3 +246,14 @@ button{font-family:inherit}
   background:var(--ink);color:var(--paper);font-size:13px;padding:11px 16px;border-radius:10px;
   max-width:88%;text-align:center;box-shadow:0 6px 20px rgba(0,0,0,.25);opacity:0;transition:.3s;pointer-events:none}
 .toast.show{opacity:1;transform:translate(-50%,0)}
+
+/* колокольчик + центр уведомлений */
+.mast-right{display:flex;flex-direction:column;align-items:flex-end;gap:2px}
+.bell{position:relative;background:none;border:none;font-size:20px;line-height:1;cursor:pointer;padding:2px;color:var(--ink)}
+.ndot{position:absolute;top:-3px;right:-5px;min-width:16px;height:16px;padding:0 4px;background:var(--brass);color:#fff;
+  font-family:var(--font-mono);font-size:10px;font-weight:700;border-radius:9px;display:grid;place-items:center;border:1.5px solid var(--paper)}
+.notif{border:1px solid var(--line);border-left:3px solid var(--slate);background:var(--card);padding:11px 13px;margin-top:10px;
+  clip-path:polygon(8px 0,100% 0,100% 100%,0 100%,0 8px)}
+.notif.unread{border-left-color:var(--brass);background:var(--brass-soft,#f4ead6)}
+.notif .nt{font-family:var(--font-serif);font-weight:700;font-size:15px}
+.notif .nb{font-size:12.5px;color:var(--slate);line-height:1.45;margin-top:4px}
