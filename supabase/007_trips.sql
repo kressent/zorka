@@ -1,5 +1,9 @@
 -- ═══ ЗОРЬКА · лента по «выездам» (одна рыбалка = одна карточка) ══════════════
--- Запусти в Supabase → SQL Editor ПОСЛЕ 006. Идемпотентно.
+-- Запусти в Supabase → SQL Editor ПОСЛЕ 004. Идемпотентно. Самодостаточно:
+-- включает профиль-ник, рейтинг «Уважения» и ленту выездов (заменяет прежние 006).
+
+-- профиль уже есть в schema.sql (PK id, ник в nickname) — гарантируем поле на старых базах
+alter table profiles add column if not exists nickname text;
 -- Раньше карточка была на каждую рыбу. Теперь группируем уловы одной рыбалки
 -- (по trip_id = id записи дневника) в один «выезд». Лайкается выезд целиком.
 -- Строки по каждой рыбе в catches сохраняем — это топливо для будущего рейтинга
@@ -91,5 +95,6 @@ left join angler_stats s on s.user_id = c.user_id
 where c.is_public = true and c.trip_id is not null
 group by c.user_id, c.trip_id, s.handle, s.points;
 
+grant select on profiles     to anon, authenticated;
 grant select on angler_stats to anon, authenticated;
 grant select on feed_trips   to anon, authenticated;
