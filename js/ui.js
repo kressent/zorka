@@ -11,6 +11,8 @@ import * as Diary from './diary.js';
 import * as Tackle from './tackle.js';
 import { makeCatchCard, shareCard } from './catchcard.js';
 import * as Notify from './notify.js';
+import * as Cloud from './cloud.js';
+import { cloudEnabled } from './config.js';
 
 // ── помощники ────────────────────────────────────────────────────────────────
 const $ = (id) => document.getElementById(id);
@@ -145,7 +147,10 @@ function renderForecast(){
     <div class="wash">
       <div class="mast"><div class="t"><button onclick="Z.openCity()">📍 ${esc(ST.city.name)} <span class="chev">▾</span></button></div>
         <div class="mast-right">
-          <button class="bell" onclick="Z.openNotif()" aria-label="Уведомления">🔔${Notify.unread()?`<span class="ndot">${Notify.unread()}</span>`:''}</button>
+          <div class="mr-icons">
+            ${cloudEnabled()?`<button class="bell" onclick="Z.openAccount()" aria-label="Аккаунт">☁️</button>`:''}
+            <button class="bell" onclick="Z.openNotif()" aria-label="Уведомления">🔔${Notify.unread()?`<span class="ndot">${Notify.unread()}</span>`:''}</button>
+          </div>
           <span class="d">${ruDateShort(now)}</span>
         </div></div>
       <div class="today">
@@ -275,6 +280,50 @@ function openModal(html){
   document.body.appendChild(m);
 }
 function closeModal(){ const m=$('modal'); if(m) m.remove(); }
+
+// облако / аккаунт
+let authEmail = '';
+async function openAccount(){
+  openModal(`<h3>Облако Зорьки</h3><div class="center" style="min-height:120px"><div class="loader"></div></div>`);
+  const user = await Cloud.currentUser();
+  const s = document.querySelector('#modal .sheet'); if(!s) return;
+  if(user){
+    s.innerHTML = `<button class="close" onclick="Z.closeModal()">✕</button><h3>Облако</h3>
+      <p style="font-size:14px;margin-top:6px">Вход выполнен:<br><b>${esc(user.email||'')}</b></p>
+      <p style="font-size:12px;color:var(--slate);margin-top:8px">Аккаунт готов. Следующим шагом подключим синхронизацию дневника между устройствами и общую ленту уловов.</p>
+      <button class="act" style="border-color:var(--bad);color:var(--bad)" onclick="Z.signOut()">Выйти</button>`;
+  } else {
+    s.innerHTML = accountEmailStep();
+  }
+}
+function accountEmailStep(){
+  return `<button class="close" onclick="Z.closeModal()">✕</button><h3>Вход в облако</h3>
+    <p style="font-size:12.5px;color:var(--slate);margin:2px 0 10px">Вход по коду из письма — пароль не нужен. Это включит облако: сохранение между устройствами и (дальше) сообщество.</p>
+    <div class="field"><label>Почта</label><input id="ac_email" type="email" inputmode="email" placeholder="you@mail.ru" value="${esc(authEmail)}"></div>
+    <button class="act" onclick="Z.sendCode()">Получить код</button>`;
+}
+function accountCodeStep(){
+  return `<button class="close" onclick="Z.closeModal()">✕</button><h3>Код из письма</h3>
+    <p style="font-size:12.5px;color:var(--slate);margin:2px 0 10px">Отправили код на <b>${esc(authEmail)}</b>. Впиши его сюда.</p>
+    <div class="field"><label>Код</label><input id="ac_code" inputmode="numeric" autocomplete="one-time-code" placeholder="123456"></div>
+    <button class="act" onclick="Z.verifyCode()">Войти</button>
+    <button class="act" style="border-color:var(--slate);color:var(--slate);margin-top:8px" onclick="Z.openAccount()">Изменить почту</button>`;
+}
+async function acSendCode(){
+  const el=$('ac_email'); if(!el) return; authEmail=el.value.trim();
+  if(!authEmail || !authEmail.includes('@')){ alert('Введи корректную почту'); return; }
+  const s=document.querySelector('#modal .sheet'); const btn=s&&s.querySelector('.act'); if(btn) btn.textContent='Отправляю…';
+  try{ await Cloud.sendCode(authEmail); if(s) s.innerHTML=accountCodeStep(); }
+  catch(e){ alert('Не удалось отправить код: '+(e.message||e)); if(btn) btn.textContent='Получить код'; }
+}
+async function acVerifyCode(){
+  const el=$('ac_code'); if(!el) return; const code=el.value.trim();
+  if(!code){ alert('Введи код из письма'); return; }
+  const s=document.querySelector('#modal .sheet'); const btn=s&&s.querySelector('.act'); if(btn) btn.textContent='Вхожу…';
+  try{ await Cloud.verifyCode(authEmail, code); closeModal(); toast('Вход выполнен — облако подключено ☁️'); rerender(); }
+  catch(e){ alert('Код не подошёл: '+(e.message||e)); if(btn) btn.textContent='Войти'; }
+}
+async function acSignOut(){ await Cloud.signOut(); closeModal(); toast('Вышли из облака'); rerender(); }
 
 // центр уведомлений
 function openNotif(){
@@ -431,6 +480,7 @@ export function initUI(){
     filter:(f)=>{ ST.filter=f; saveSettings(); rerender(); },
     tf:(el)=>el.classList.toggle('open'),
     openCity, searchCity, pickCity, geo, closeModal, openNotif,
+    openAccount, sendCode: acSendCode, verifyCode: acVerifyCode, signOut: acSignOut,
     newEntry, editEntry, addCatch, rmCatch, setW, setRating, saveEntry, delEntry, shareCatch,
     newKit, editKit, kitIcon, kitTarget, addLure, lureQty, rmLure, saveKit, delKit,
     mapView:(v)=>{ ST.mapView=v; rerender(); }, newPlace, placeGeo, savePlace, delPlace,
