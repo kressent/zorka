@@ -361,14 +361,15 @@ async function openAccount(){
     const handle = (st&&st.handle)||'';
     const rk = anglerRank(st?st.points:0);
     const nextR = RANKS.find(r=>r.min>(st?st.points:0));
-    const toNext = nextR ? `до «${nextR.t}» — ${nextR.min-(st?st.points:0)} очков` : 'высший ранг 🏆';
+    const toNext = nextR ? `до «${nextR.t}» — ${nextR.min-(st?st.points:0)} очков уважения` : 'высший ранг 🏆';
     s.innerHTML = `<button class="close" onclick="Z.closeModal()">✕</button>
       <div class="prof-head">
         <div class="prof-fish">${rankFish(rk.n)}</div>
         <div class="prof-name">${esc(handle||'Рыбак')}</div>
-        <div class="prof-title">${rk.t} · ${st?st.points:0} очков</div>
+        <div class="prof-title">${rk.t} · ${st?st.points:0} очков уважения</div>
         <div class="prof-next">${toNext}</div>
       </div>
+      <p class="prof-hint">Очки уважения растут от лайков других рыбаков и медленно тускнеют без рыбалки. Накрутить количеством рыбы нельзя.</p>
       <div class="prof-stats">
         <div><b>${st?st.catches||0:0}</b><span>уловов</span></div>
         <div><b>${st?st.likes||0:0}</b><span>лайков</span></div>

@@ -1,15 +1,23 @@
--- ═══ ЗОРЬКА · рейтинг рыбака (поверх существующей таблицы profiles) ══════════
+-- ═══ ЗОРЬКА · рейтинг «Уважения» (поверх существующей таблицы profiles) ══════
 -- Запусти в Supabase → SQL Editor ПОСЛЕ 004. Идемпотентно — можно повторять.
--- ВАЖНО: таблица profiles уже создана в schema.sql (PK = id → auth.users,
--- ник в поле nickname). Здесь мы её НЕ пересоздаём, а строим агрегаты (очки/ранг)
--- и добавляем ник + очки автора в ленту. Внутри вью id → user_id, nickname → handle.
+-- profiles уже создана в schema.sql (PK = id → auth.users, ник в поле nickname).
+-- Здесь строим агрегаты и очки, добавляем ник + очки автора в ленту.
+-- Внутри вью: id → user_id, nickname → handle.
+--
+-- ФИЛОСОФИЯ РЕЙТИНГА (не накрутить количеством рыбы):
+--   • Очки дают ТОЛЬКО лайки других рыбаков (не свои — self-like не считается).
+--   • «Выцветание»: каждый лайк весит по полной первые недели и медленно тускнеет
+--     (полураспад ~83 дня). Ловишь и делишься → свежие лайки держат рейтинг.
+--     Забросил → новых нет, старые тускнеют → рейтинг сам плавно сползает.
+--   • Небольшой бонус за сбывшийся прогноз (поймал в день с баллом ≥4) — он тоже
+--     выцветает, т.к. завязан на дату улова. Погоду не накрутишь.
+--   • Трофей (крупная рыба для своего вида) — добавим на след. шаге, когда наберём
+--     базу весов по видам.
+-- decay(age) = exp(-age_дней / 120)   → полураспад ≈ 83 дня.
 
 -- на старых базах гарантируем поле ника
 alter table profiles add column if not exists nickname text;
 
--- агрегаты рыбака + очки.
--- Маховик поощряет: активность (уловы), регулярность (дни), разнообразие (виды),
--- признание (лайки) и стаж (недели с регистрации).
 create or replace view angler_stats as
 select
   p.id                    as user_id,
@@ -18,31 +26,33 @@ select
   coalesce(cc.catches, 0) as catches,
   coalesce(cc.days, 0)    as days,
   coalesce(cc.species, 0) as species,
-  coalesce(lk.likes, 0)   as likes,
-  ( coalesce(cc.catches,0) * 10
-  + coalesce(cc.days,0)    * 5
-  + coalesce(cc.species,0) * 15
-  + coalesce(lk.likes,0)   * 3
-  + floor(extract(epoch from (now() - p.created_at)) / 604800)::int * 2
-  )::int as points
+  coalesce(rl.likes, 0)   as likes,
+  round( coalesce(rl.recog, 0) * 10 + coalesce(cc.fhit, 0) * 4 )::int as points
 from profiles p
 left join (
   select user_id,
          count(*)                        as catches,
          count(distinct date(caught_at)) as days,
-         count(distinct species)         as species
+         count(distinct species)         as species,
+         sum(case when forecast_score >= 4
+                  then exp(- extract(epoch from (now() - caught_at)) / 86400.0 / 120.0)
+                  else 0 end)            as fhit
   from catches
   where is_public = true
   group by user_id
 ) cc on cc.user_id = p.id
 left join (
-  select ca.user_id, count(*) as likes
+  select ca.user_id,
+         count(*) as likes,
+         sum(exp(- extract(epoch from (now() - cl.created_at)) / 86400.0 / 120.0)) as recog
   from catch_likes cl
   join catches ca on ca.id = cl.catch_id
+  where ca.is_public = true
+    and cl.user_id <> ca.user_id          -- свой лайк не считается
   group by ca.user_id
-) lk on lk.user_id = p.id;
+) rl on rl.user_id = p.id;
 
--- лента с ником и очками автора (координаты — огрублённые lat_pub/lon_pub)
+-- лента с ником и (выцветающими) очками автора; координаты — огрублённые
 create or replace view feed_catches as
   select c.id, c.species, c.weight, c.caught_at, c.water_name,
          c.lat_pub as lat, c.lon_pub as lon, c.lure, c.forecast_score, c.created_at,
