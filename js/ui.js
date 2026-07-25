@@ -18,6 +18,7 @@ import * as MapView from './mapview.js';
 import { weekTop, tripHeaviest } from './leaderboard.js';
 import { engagementNotifs } from './engagement.js';
 import { indexLureStats, topLures } from './lurestats.js';
+import { goodDayAlert } from './forecastAlert.js';
 import { cloudEnabled } from './config.js';
 
 // ── помощники ────────────────────────────────────────────────────────────────
@@ -88,6 +89,11 @@ export async function loadWeather(){
   try{
     const { data, fromCache } = await fetchWeather(ST.city.lat, ST.city.lon);
     ST.weather = data; ST.fromCache = fromCache; rerender();
+    // удержание: если впереди сильный день — зовём на воду (в колокольчик)
+    try{ const idx=todayIndex(data);
+      const fc=computeForecast(data,{filter:ST.filter,custom:ST.custom,todayIdx:idx,lat:ST.city.lat,lon:ST.city.lon});
+      const a=goodDayAlert(fc.upcoming, fc.day.score); if(a){ Notify.addNotif(a); rerender(); }
+    }catch(e){}
   }catch(e){
     main.innerHTML = `<div class="center"><div class="ic">📡</div><h2>Нет связи</h2><p>Не удалось загрузить погоду и нет сохранённой копии.</p><button class="act" style="max-width:220px" onclick="Z.reload()">Повторить</button></div>`;
     $('tabbar').innerHTML=navHTML();

@@ -255,6 +255,7 @@ export function computeForecast(data, opts = {}) {
     const dt = new Date(data.daily.time[i]);
     upcoming.push({
       name: (i === todayIdx + 1) ? 'Завтра' : `${days[dt.getDay()]} ${dt.getDate()}`,
+      date: data.daily.time[i],
       score: sc.length ? Math.round(avg(sc) * 10) / 10 : 0,
       maxT: d.maxT, minT: d.minT, avgP: d.avgP, pdir: d.pdir, wcode: d.wcode,
     });
