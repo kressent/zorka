@@ -221,6 +221,8 @@ button{font-family:inherit}
 .lure-chip{font-size:11.5px;background:var(--card);border:1px solid var(--line);color:var(--slate);padding:3px 9px;cursor:pointer;clip-path:polygon(5px 0,100% 0,100% 100%,0 100%,0 5px)}
 .lure-chip.on{border-color:var(--jade);color:var(--jade);background:rgba(44,110,90,.10);font-weight:600}
 .lure-chip.cust{border-style:dashed}
+.pub-toggle{display:flex;align-items:center;gap:8px;margin:14px 0 4px;font-size:13.5px;color:var(--ink);cursor:pointer}
+.pub-toggle input{width:18px;height:18px;flex:none;accent-color:var(--jade);cursor:pointer}
 .cl-lure{color:var(--jade);font-size:12px;font-family:var(--font-mono)}
 .tg.real{border-color:var(--brass);color:var(--brass)}
 .tg.real b{color:var(--ink)}

@@ -610,6 +610,7 @@ function renderEntry(){
     <div id="catchRows">${rows||'<p style="font-size:12px;color:var(--slate);margin:6px 0">Нажми на рыбу выше, чтобы добавить. Вес пустой = «не взвешивал».</p>'}</div>
     <div class="field"><label>Оценка</label><div class="stars" id="stars">${stars}</div></div>
     <div class="field"><label>Заметка</label><textarea id="e_note" placeholder="что сработало, погода, место…">${esc(draft.note||'')}</textarea></div>
+    <label class="pub-toggle"><input type="checkbox" id="e_private" ${draft.private?'checked':''} onchange="Z.setPrivate(this.checked)"><span>🔒 Не показывать в общей ленте — только для меня</span></label>
     <button class="act" onclick="Z.saveEntry()">Сохранить</button>
     ${draft.id?`<button class="act" style="border-color:var(--bad);color:var(--bad);margin-top:8px" onclick="Z.delEntry('${draft.id}')">Удалить запись</button>`:''}`);
 }
@@ -627,7 +628,8 @@ function lureCandidates(species){
 function setLure(i,l){ if(!draft||!draft.catches[i]) return; syncEntryFields(); draft.catches[i].lure = (draft.catches[i].lure===l)?null:l; renderEntry(); }
 function lureCustom(i){ if(!draft||!draft.catches[i]) return; syncEntryFields(); const v=prompt('На что поймал? (приманка/наживка)', draft.catches[i].lure||''); if(v!=null){ const t=v.trim(); draft.catches[i].lure=t||null; renderEntry(); } }
 function setRating(r){ draft.rating=r; syncEntryFields(); renderEntry(); }
-function syncEntryFields(){ const s=$('e_spot'),n=$('e_note'); if(s)draft.spot=s.value; if(n)draft.note=n.value; }
+function setPrivate(v){ if(draft) draft.private=!!v; }
+function syncEntryFields(){ const s=$('e_spot'),n=$('e_note'),p=$('e_private'); if(s)draft.spot=s.value; if(n)draft.note=n.value; if(p)draft.private=p.checked; }
 function saveEntry(){
   syncEntryFields();
   draft.visited=true;
@@ -638,11 +640,15 @@ function saveEntry(){
   }
   const saved = draft;
   Diary.upsertEntry(saved); draft=null; closeModal(); rerender(); Sync.pushSoon();
-  // всегда синхронизируем ленту: и добавление, и правка, и убранная рыба
+  // синхронизируем ленту: приватный улов — убрать из ленты, обычный — опубликовать
   if(cloudEnabled() && Cloud.cachedUser()){
-    Cloud.publishCatches(saved, ST.city?ST.city.name:'', ST.city?{lat:ST.city.lat,lon:ST.city.lon}:{})
-      .then(()=>{ if((saved.catches||[]).length) toast('Улов в ленте 🎣'); })
-      .catch(e=>{ console.warn('publish:',e); toast('Лента не приняла: '+(e.message||e)); });
+    if(saved.private){
+      Cloud.unpublishEntry(saved.id).then(()=>toast('Сохранено, в ленту не попало 🔒')).catch(e=>console.warn('unpublish:',e));
+    } else {
+      Cloud.publishCatches(saved, ST.city?ST.city.name:'', ST.city?{lat:ST.city.lat,lon:ST.city.lon}:{})
+        .then(()=>{ if((saved.catches||[]).length) toast('Улов в ленте 🎣'); })
+        .catch(e=>{ console.warn('publish:',e); toast('Лента не приняла: '+(e.message||e)); });
+    }
   }
 }
 function delEntry(id){ if(confirm('Удалить запись?')){ Diary.deleteEntry(id);
@@ -738,7 +744,7 @@ export function initUI(){
     openCity, searchCity, pickCity, geo, closeModal, openNotif,
     openAccount, signIn: acSignIn, setPass: acSetPass, signOut: acSignOut, syncNow: acSyncNow, saveHandle: acSaveHandle, enablePush: acEnablePush,
     like: feedLike, comments: openComments, sendComment, delComment,
-    newEntry, editEntry, addCatch, rmCatch, setW, setLure, lureCustom, setRating, saveEntry, delEntry, shareCatch,
+    newEntry, editEntry, addCatch, rmCatch, setW, setLure, lureCustom, setRating, setPrivate, saveEntry, delEntry, shareCatch,
     newKit, editKit, kitIcon, kitTarget, addLure, lureQty, rmLure, saveKit, delKit,
     mapView:(v)=>{ ST.mapView=v; MapView.setLayer(v); document.querySelectorAll('.mtoggle button').forEach((b,i)=>b.classList.toggle('on',(i===0)===(v==='satellite'))); },
     mapPick:(la,lo)=>newPlace({lat:la,lon:lo}), newPlace, placeGeo, savePlace, delPlace,
