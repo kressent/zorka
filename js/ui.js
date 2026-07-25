@@ -195,6 +195,7 @@ function renderForecast(){
       <div class="lbl" style="margin-top:8px">Прогноз на 2 недели</div>
       ${(fc.bestDay && fc.bestDay.name!=='Сегодня') ? `<div style="font-family:var(--font-serif);font-size:13.5px;color:var(--jade);margin:8px 0 2px">🏆 Лучший день — <b>${esc(fc.bestDay.name)}</b> · ${fc.bestDay.score.toFixed(1)}/5</div>` : `<div style="font-size:12.5px;color:var(--slate);margin:8px 0 2px">🏆 Лучший день — сегодня</div>`}
       <div class="days">${upHTML}</div>
+      <button class="act" style="border-color:var(--brass);color:var(--brass)" onclick="Z.openMoon()">🌙 Лунный календарь на 2 недели</button>
       <button class="act" style="border-color:var(--jade);color:var(--jade)" onclick="Z.shareForecast()">📤 Поделиться прогнозом</button>
       <div class="honesty">Прогноз строится на погоде, давлении, луне, воде и сезоне. Станет точнее, когда рыбаки начнут отмечать уловы — это уже заложено.</div>
       <div style="height:8px"></div>
@@ -333,6 +334,18 @@ async function loadLureStats(){
   try{ LURE_STATS = indexLureStats(await Cloud.fetchLureRating()); rerender(); }catch(e){}
 }
 function fmtDate(iso){ try{ const d=new Date(iso+'T12:00:00'); return d.getDate()+' '+MONTHS_GEN[d.getMonth()]; }catch(e){ return ''; } }
+function openMoon(){
+  const base=new Date(); base.setHours(12,0,0,0);
+  const days=[]; for(let i=0;i<14;i++){ const d=new Date(base); d.setDate(base.getDate()+i); days.push({d, m:moonInfo(d)}); }
+  const maxSc=Math.max(...days.map(x=>x.m.sc));
+  const rows=days.map((x,i)=>{ const best=x.m.sc>=maxSc; const w=Math.round(x.m.sc/5*100);
+    return `<div class="moon-row${best?' best':''}"><span class="moon-i">${x.m.icon}</span>
+      <div class="moon-d"><b>${i===0?'Сегодня':x.d.getDate()+' '+MONTHS_GEN[x.d.getMonth()]}</b><span>${esc(x.m.name)}</span></div>
+      <div class="moon-bar"><i style="width:${w}%"></i></div><span class="moon-sc">${x.m.sc}/5</span></div>`; }).join('');
+  openModal(`<h3>🌙 Лунный календарь · 2 недели</h3>
+    <p style="font-size:12.5px;color:var(--slate);margin:2px 0 10px">Луна влияет на активность рыбы. Чем ярче полоса — тем лучше по луне. Учитывается и в основном прогнозе.</p>
+    ${rows}`);
+}
 async function shareForecast(){
   if(!(ST.weather && ST.city)) return;
   let text='';
@@ -405,7 +418,7 @@ function realLureHTML(species){
   return `<div class="lbl">🔥 Реально берут на <span class="lbl-sub">(по уловам рыбаков)</span></div><div class="tag-row">${chips}</div>`;
 }
 
-let feedFilter='all';
+let feedFilter='all', feedSpecies=null;
 function renderFeed(){
   setTimeout(loadFeed, 0);
   const btn=(m,l)=>`<button class="${feedFilter===m?'on':''}" onclick="Z.feedMode('${m}')">${l}</button>`;
@@ -424,6 +437,8 @@ async function loadFeed(){
     const liked = me ? await Cloud.myLikes(items.map(i=>i.id)) : new Set();
     const top = weekTop(items, Date.now(), 3);              // «улов недели» — всегда общий
     const lead = top.length?leaderboardHTML(top):'';
+    const spAll = [...new Set(items.flatMap(t=>(t.fish||[]).map(f=>f&&f.species).filter(Boolean)))];
+    const spChips = spAll.length>1 ? `<div class="feed-sp">${spAll.map(s=>{const b=byId(s);return `<button class="${feedSpecies===s?'on':''}" onclick="Z.feedSp('${s}')">${b?esc(b.n):esc(s)}</button>`;}).join('')}${feedSpecies?'<button class="clr" onclick="Z.feedSp(\'\')">✕</button>':''}</div>` : '';
     let list = items;
     if(feedFilter==='near'){
       if(!ST.city){ box.innerHTML=lead+feedEmpty('Сначала выбери свой город вверху — тогда покажу уловы рядом.'); return; }
@@ -434,7 +449,8 @@ async function loadFeed(){
       list = items.filter(t=>t.user_id===me);
       if(!list.length){ box.innerHTML=lead+feedEmpty('Ты ещё не делился уловами. Запиши рыбалку в дневнике 🎣'); return; }
     }
-    box.innerHTML = lead + list.map(it=>feedCard(it, liked.has(it.id), me)).join('');
+    if(feedSpecies) list = list.filter(t=>(t.fish||[]).some(f=>f&&f.species===feedSpecies));
+    box.innerHTML = lead + spChips + (list.length ? list.map(it=>feedCard(it, liked.has(it.id), me)).join('') : feedEmpty('Нет уловов по этому фильтру.'));
   }catch(e){ box.innerHTML=feedEmpty('Не удалось загрузить ленту. '+(e.message||'')); }
 }
 function feedEmpty(msg){ return `<div class="empty"><div class="ei">🎣</div><p>${esc(msg)}</p></div>`; }
@@ -870,9 +886,9 @@ export function initUI(){
     tab, reload:()=>loadWeather(),
     filter:(f)=>{ ST.filter=f; saveSettings(); rerender(); },
     tf:(el)=>el.classList.toggle('open'),
-    openCity, searchCity, pickCity, geo, closeModal, openNotif, shareForecast, onboardDone,
+    openCity, searchCity, pickCity, geo, closeModal, openNotif, shareForecast, onboardDone, openMoon,
     openAccount, signIn: acSignIn, setPass: acSetPass, signOut: acSignOut, syncNow: acSyncNow, saveHandle: acSaveHandle, enablePush: acEnablePush, install: promptInstall,
-    like: feedLike, comments: openComments, sendComment, delComment, feedMode:(m)=>{ feedFilter=m; rerender(); },
+    like: feedLike, comments: openComments, sendComment, delComment, feedMode:(m)=>{ feedFilter=m; rerender(); }, feedSp:(s)=>{ feedSpecies=(s&&s!==feedSpecies)?s:null; loadFeed(); },
     newEntry, editEntry, addCatch, rmCatch, setW, setLure, lureCustom, setRating, setPrivate, saveEntry, delEntry, shareCatch, openRecords, exportDiary, importDiary,
     newKit, editKit, kitIcon, kitTarget, addLure, lureQty, rmLure, saveKit, delKit,
     mapView:(v)=>{ ST.mapView=v; MapView.setLayer(v); document.querySelectorAll('.mtoggle button').forEach((b,i)=>b.classList.toggle('on',(i===0)===(v==='satellite'))); },

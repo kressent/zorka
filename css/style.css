@@ -230,6 +230,18 @@ button{font-family:inherit}
 .onb-i{font-size:26px;flex:none;line-height:1}
 .onb-t b{font-family:var(--font-serif);font-size:15px}
 .onb-t p{font-size:13px;color:var(--slate);line-height:1.45;margin-top:2px}
+/* лунный календарь */
+.moon-row{display:flex;align-items:center;gap:10px;padding:7px 0;border-top:1px solid var(--line)}
+.moon-row:first-of-type{border-top:none}
+.moon-row.best{background:rgba(197,138,46,.07)}
+.moon-i{font-size:20px;flex:none;width:24px;text-align:center}
+.moon-d{width:96px;flex:none}
+.moon-d b{font-family:var(--font-serif);font-size:13.5px;display:block}
+.moon-d span{font-size:10.5px;color:var(--slate)}
+.moon-bar{flex:1;height:7px;background:var(--empty);overflow:hidden}
+.moon-bar i{display:block;height:100%;background:var(--jade)}
+.moon-row.best .moon-bar i{background:var(--brass)}
+.moon-sc{font-family:var(--font-mono);font-size:11px;color:var(--slate);flex:none;width:28px;text-align:right}
 .cl-lure{color:var(--jade);font-size:12px;font-family:var(--font-mono)}
 .tg.real{border-color:var(--brass);color:var(--brass)}
 .tg.real b{color:var(--ink)}
@@ -288,6 +300,11 @@ button{font-family:inherit}
 .feed-modes{display:flex;gap:6px;margin:10px 0 2px}
 .feed-modes button{flex:1;background:var(--card);border:1px solid var(--line);color:var(--slate);font:inherit;font-size:12.5px;padding:6px 0;cursor:pointer;clip-path:polygon(6px 0,100% 0,100% 100%,0 100%,0 6px)}
 .feed-modes button.on{border-color:var(--jade);color:var(--jade);background:rgba(44,110,90,.10);font-weight:600}
+.feed-sp{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;margin:10px 0 2px;padding-bottom:2px}
+.feed-sp::-webkit-scrollbar{display:none}
+.feed-sp button{flex:none;background:var(--card);border:1px solid var(--line);color:var(--slate);font:inherit;font-size:11.5px;padding:4px 10px;cursor:pointer;white-space:nowrap;clip-path:polygon(5px 0,100% 0,100% 100%,0 100%,0 5px)}
+.feed-sp button.on{border-color:var(--brass);color:var(--brass);background:rgba(197,138,46,.08);font-weight:600}
+.feed-sp button.clr{color:var(--bad)}
 .feed-card{border:1px solid var(--rule);background:var(--card);padding:12px 14px;margin-top:10px;
   clip-path:polygon(12px 0,100% 0,100% 100%,0 100%,0 12px)}
 .feed-card .fc-top{display:flex;align-items:center;gap:10px}
