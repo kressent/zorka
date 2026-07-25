@@ -829,7 +829,7 @@ function delPlace(i){ if(confirm('Удалить место?')){ removePlace(i);
 // ── экспорт API для inline-обработчиков ──────────────────────────────────────
 export function initUI(){
   Notify.ensureWelcome();
-  window.addEventListener('beforeinstallprompt', e=>{ e.preventDefault(); deferredPrompt=e; });
+  if(typeof window!=='undefined' && window.addEventListener) window.addEventListener('beforeinstallprompt', e=>{ e.preventDefault(); deferredPrompt=e; });
   Sync.onSynced(() => rerender());
   if (cloudEnabled() && Cloud.cachedUser()) { Sync.syncOnLogin(); Cloud.ensureProfile().catch(()=>{}); setTimeout(checkEngagement, 1800); }
   if (cloudEnabled()) setTimeout(loadLureStats, 600);
