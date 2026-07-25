@@ -349,8 +349,10 @@ function openRecords(){
     ${r.favLure?`<div class="rec-line">🎣 Любимая приманка: <b>${esc(r.favLure.lure)}</b> · ${r.favLure.n}</div>`:''}
     ${r.topSpecies?`<div class="rec-line">🐟 Чаще всего: <b>${esc(r.topSpecies.name)}</b> · ${r.topSpecies.n}</div>`:''}
     <div class="rec-line">📅 Дней на воде: <b>${r.days}</b> · всего <b>${(r.totalG/1000).toFixed(1)} кг</b></div>`;
+  const trophies = Object.entries(r.biggest).filter(([sp,b])=>isTrophy(sp,b.weight));
+  const troHTML = trophies.length ? `<div class="lbl" style="margin-top:16px">🏆 Твои трофеи</div><div class="tag-row">${trophies.map(([sp,b])=>`<span class="tg real">${esc((byId(sp)||{}).n||sp)} ${fmtW(b.weight)}</span>`).join('')}</div>` : '';
   const achHTML = ach.map(a=>`<div class="ach${a.done?' on':''}"><span class="ach-i">${a.icon}</span><span class="ach-n">${esc(a.name)}</span><span class="ach-p">${a.done?'✓':a.cur+'/'+a.need}</span></div>`).join('');
-  openModal(`<h3>🏆 Рекорды и достижения</h3>${recHTML}
+  openModal(`<h3>🏆 Рекорды и достижения</h3>${recHTML}${troHTML}
     <div class="lbl" style="margin-top:16px">Достижения · ${done}/${ach.length}</div>
     <div class="ach-grid">${achHTML}</div>
     <button class="act" style="margin-top:16px" onclick="Z.exportDiary()">📥 Скачать дневник (резервная копия)</button>
@@ -423,8 +425,8 @@ function feedCard(it, mine, myId){
   const d=it.caught_at?new Date(it.caught_at):null;
   const dl=d?`${d.getDate()} ${MONTHS_GEN[d.getMonth()]}`:'';
   const fish=(it.fish||[]).filter(x=>x&&x.species);
-  const rows=fish.map(x=>{ const f=byId(x.species); const nm=f?f.n:esc(x.species); const col=f?f.col:'#7c8a80'; const wv=fmtW(x.weight); const tr=isTrophy(x.species,x.weight)?' 🏆':'';
-    return `<div class="tc-fish"><span class="dot" style="background:${col}"></span><span class="tc-fn">${nm}${tr}</span><span class="tc-fw">${wv||'—'}</span></div>`; }).join('');
+  const rows=fish.map(x=>{ const f=byId(x.species); const nm=f?f.n:esc(x.species); const col=f?f.col:'#7c8a80'; const wv=fmtW(x.weight); const tr=isTrophy(x.species,x.weight)?' 🏆':''; const lu=x.lure?`<span class="tc-lure">на ${esc(x.lure)}</span>`:'';
+    return `<div class="tc-fish"><span class="dot" style="background:${col}"></span><span class="tc-fn">${nm}${tr}</span>${lu}<span class="tc-fw">${wv||'—'}</span></div>`; }).join('');
   const sc=it.forecast_score!=null?`<span class="feed-badge">прогноз был ${Number(it.forecast_score).toFixed(1)}/5 ✅</span>`:'';
   const rk=anglerRank(it.points);
   const who=`<div class="fc-who"><span class="fc-name">${esc(it.handle||'Рыбак')}</span>${rankFish(rk.n)}<span class="fc-title">${rk.t}</span></div>`;
