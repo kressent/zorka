@@ -22,6 +22,7 @@ import { goodDayAlert } from './forecastAlert.js';
 import { sortByNear } from './geo.js';
 import { personalRecords } from './records.js';
 import { achievements } from './achievements.js';
+import { forecastPost } from './postgen.js';
 import { cloudEnabled } from './config.js';
 
 // ── помощники ────────────────────────────────────────────────────────────────
@@ -194,6 +195,7 @@ function renderForecast(){
       <div class="lbl" style="margin-top:8px">Прогноз на 2 недели</div>
       ${(fc.bestDay && fc.bestDay.name!=='Сегодня') ? `<div style="font-family:var(--font-serif);font-size:13.5px;color:var(--jade);margin:8px 0 2px">🏆 Лучший день — <b>${esc(fc.bestDay.name)}</b> · ${fc.bestDay.score.toFixed(1)}/5</div>` : `<div style="font-size:12.5px;color:var(--slate);margin:8px 0 2px">🏆 Лучший день — сегодня</div>`}
       <div class="days">${upHTML}</div>
+      <button class="act" style="border-color:var(--jade);color:var(--jade)" onclick="Z.shareForecast()">📤 Поделиться прогнозом</button>
       <div class="honesty">Прогноз строится на погоде, давлении, луне, воде и сезоне. Станет точнее, когда рыбаки начнут отмечать уловы — это уже заложено.</div>
       <div style="height:8px"></div>
     </div>`;
@@ -319,6 +321,18 @@ async function loadLureStats(){
   try{ LURE_STATS = indexLureStats(await Cloud.fetchLureRating()); rerender(); }catch(e){}
 }
 function fmtDate(iso){ try{ const d=new Date(iso+'T12:00:00'); return d.getDate()+' '+MONTHS_GEN[d.getMonth()]; }catch(e){ return ''; } }
+async function shareForecast(){
+  if(!(ST.weather && ST.city)) return;
+  let text='';
+  try{ const idx=todayIndex(ST.weather);
+    const fc=computeForecast(ST.weather,{filter:ST.filter,custom:ST.custom,todayIdx:idx,lat:ST.city.lat,lon:ST.city.lon});
+    text=forecastPost(fc, ST.city.name);
+  }catch(e){ return; }
+  try{ if(navigator.share){ await navigator.share({text}); return; } }
+  catch(e){ if(e&&e.name==='AbortError') return; }
+  try{ await navigator.clipboard.writeText(text); toast('Прогноз скопирован — вставь куда угодно 📋'); }
+  catch(e){ toast('Не удалось поделиться'); }
+}
 function openRecords(){
   const entries = Diary.getEntries();
   const r = personalRecords(entries);
@@ -338,7 +352,19 @@ function openRecords(){
   const achHTML = ach.map(a=>`<div class="ach${a.done?' on':''}"><span class="ach-i">${a.icon}</span><span class="ach-n">${esc(a.name)}</span><span class="ach-p">${a.done?'✓':a.cur+'/'+a.need}</span></div>`).join('');
   openModal(`<h3>🏆 Рекорды и достижения</h3>${recHTML}
     <div class="lbl" style="margin-top:16px">Достижения · ${done}/${ach.length}</div>
-    <div class="ach-grid">${achHTML}</div>`);
+    <div class="ach-grid">${achHTML}</div>
+    <button class="act" style="margin-top:16px" onclick="Z.exportDiary()">📥 Скачать дневник (резервная копия)</button>`);
+}
+function exportDiary(){
+  try{
+    const data = { app:'Зорька', version:1, exported:new Date().toISOString(),
+      entries:Diary.getEntries(), places:getPlaces(), kits:Tackle.getKits() };
+    const blob = new Blob([JSON.stringify(data,null,2)], {type:'application/json'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href=url; a.download='zorka-dnevnik.json'; a.click();
+    setTimeout(()=>URL.revokeObjectURL(url), 5000);
+    toast('Дневник сохранён в файл 📥');
+  }catch(e){ toast('Не удалось экспортировать'); }
 }
 function realLureHTML(species){
   const top = topLures(LURE_STATS, species, 3);
@@ -782,10 +808,10 @@ export function initUI(){
     tab, reload:()=>loadWeather(),
     filter:(f)=>{ ST.filter=f; saveSettings(); rerender(); },
     tf:(el)=>el.classList.toggle('open'),
-    openCity, searchCity, pickCity, geo, closeModal, openNotif,
+    openCity, searchCity, pickCity, geo, closeModal, openNotif, shareForecast,
     openAccount, signIn: acSignIn, setPass: acSetPass, signOut: acSignOut, syncNow: acSyncNow, saveHandle: acSaveHandle, enablePush: acEnablePush,
     like: feedLike, comments: openComments, sendComment, delComment, feedMode:(n)=>{ feedNear=!!n; rerender(); },
-    newEntry, editEntry, addCatch, rmCatch, setW, setLure, lureCustom, setRating, setPrivate, saveEntry, delEntry, shareCatch, openRecords,
+    newEntry, editEntry, addCatch, rmCatch, setW, setLure, lureCustom, setRating, setPrivate, saveEntry, delEntry, shareCatch, openRecords, exportDiary,
     newKit, editKit, kitIcon, kitTarget, addLure, lureQty, rmLure, saveKit, delKit,
     mapView:(v)=>{ ST.mapView=v; MapView.setLayer(v); document.querySelectorAll('.mtoggle button').forEach((b,i)=>b.classList.toggle('on',(i===0)===(v==='satellite'))); },
     mapPick:(la,lo)=>newPlace({lat:la,lon:lo}), newPlace, placeGeo, savePlace, delPlace,
