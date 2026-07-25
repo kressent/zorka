@@ -4,7 +4,7 @@
 // ставит точку (можно из дома). Бесплатно, без ключей. Библиотека грузится
 // лениво с CDN (нужна сеть; офлайн карта не работает — остальное приложение да).
 
-let _L = null, _loading = null, _map = null, _base = {}, _spotLayer = null, _pin = null;
+let _L = null, _loading = null, _map = null, _base = {}, _spotLayer = null, _pin = null, _catchLayer = null;
 
 function loadLeaflet() {
   if (_L) return Promise.resolve(_L);
@@ -39,6 +39,7 @@ export async function initMap(elId, center, places, onPick, layer) {
       { maxZoom: 19, attribution: '© Esri' });
     (layer === 'scheme' ? _base.osm : _base.sat).addTo(_map);
     _spotLayer = L.layerGroup().addTo(_map);
+    _catchLayer = L.layerGroup().addTo(_map);
     drawSpots(L, places);
     _map.on('click', (e) => {
       if (_pin) _spotLayer.removeLayer(_pin);
@@ -60,6 +61,20 @@ function drawSpots(L, places) {
         .addTo(_spotLayer).bindPopup('<b>' + (p.name || '') + '</b>' + (p.depth ? '<br>' + p.depth : ''));
   });
 }
+
+// уловы сообщества (огрублённые координаты). marks: [{lat, lon, water_name, label}]
+export function drawCatches(marks) {
+  if (!_map || !_L) return;
+  if (!_catchLayer) _catchLayer = _L.layerGroup().addTo(_map);
+  _catchLayer.clearLayers();
+  (marks || []).forEach(m => {
+    if (m.lat == null || m.lon == null) return;
+    _L.circleMarker([m.lat, m.lon], { radius: 6, color: '#C58A2E', fillColor: '#2C6E5A', fillOpacity: .65, weight: 1 })
+      .addTo(_catchLayer)
+      .bindPopup('🎣 <b>' + (m.water_name || 'Улов') + '</b>' + (m.label ? '<br>' + m.label : ''));
+  });
+}
+export function clearCatches() { if (_catchLayer) _catchLayer.clearLayers(); }
 
 export function setLayer(which) {
   if (!_map || !_base.osm) return;

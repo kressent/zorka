@@ -258,10 +258,21 @@ function schemeSVG(){
     <path d="M-10,46 C60,66 90,26 150,60 C210,94 240,64 330,98 L330,152 C240,122 210,152 150,114 C90,78 60,118 -10,98 Z" fill="#bcd6cb" fill-opacity="0.7" stroke="#2C6E5A" stroke-opacity=".5"/>
     <path d="M150,60 C150,112 120,152 90,190" fill="none" stroke="#2C6E5A" stroke-opacity=".4" stroke-width="9"/></svg>`;
 }
+let mapShowCatches=true;
 function renderMap(){
   const places = getPlaces();
   const center = ST.city ? {lat:ST.city.lat, lon:ST.city.lon} : {lat:55.75, lon:37.62};
-  setTimeout(()=>MapView.initMap('mapEl', center, places, (la,lo)=>Z.mapPick(la,lo), ST.mapView), 30);
+  setTimeout(async ()=>{
+    await MapView.initMap('mapEl', center, places, (la,lo)=>Z.mapPick(la,lo), ST.mapView);
+    if(cloudEnabled() && mapShowCatches){
+      try{ const items=await Cloud.fetchFeed(80);
+        MapView.drawCatches(items.filter(t=>t.lat!=null&&t.lon!=null).map(t=>({
+          lat:t.lat, lon:t.lon, water_name:t.water_name,
+          label:(t.fish||[]).filter(f=>f&&f.species).map(f=>{ const b=byId(f.species); return (b?b.n:f.species)+(f.weight?' '+fmtW(f.weight):''); }).join(', ')
+        })));
+      }catch(e){}
+    }
+  }, 30);
   const spots = places.length ? places.map((p,i)=>`<div class="spot"><span class="sp-pin"></span>
       <div class="sp-i"><b>${esc(p.name)}</b>${p.depth?`<div class="dn">🌊 ${esc(p.depth)}</div>`:''}<div class="mt">${p.note?esc(p.note):'сохранённое место'}</div></div>
       <button class="rm" style="background:none;border:none;color:var(--bad);font-size:16px;cursor:pointer" onclick="Z.delPlace(${i})">✕</button></div>`).join('')
@@ -270,6 +281,7 @@ function renderMap(){
   return `<div class="pad"><div class="mast"><span class="t">Мои места</span><span class="d">${places.length} точек</span></div>
     <div class="mtoggle"><button class="${ST.mapView==='satellite'?'on':''}" onclick="Z.mapView('satellite')">Спутник</button><button class="${ST.mapView!=='satellite'?'on':''}" onclick="Z.mapView('scheme')">Схема</button></div>
     <div id="mapEl" style="height:300px;margin-top:8px;border:1px solid var(--rule);background:#dfe6e0;z-index:0"></div>
+    ${cloudEnabled()?`<label class="pub-toggle" style="margin:8px 0 0"><input type="checkbox" ${mapShowCatches?'checked':''} onchange="Z.mapCatches(this.checked)"><span>🎣 Показывать уловы рыбаков на карте</span></label>`:''}
     <p style="font-size:11.5px;color:var(--slate);margin-top:6px">📍 Нажми на карту, чтобы поставить метку места — хоть из дома.</p>
     ${spots}
     <button class="act" onclick="Z.newPlace()">＋ Добавить по геолокации</button><div style="height:10px"></div></div>`;
@@ -850,6 +862,6 @@ export function initUI(){
     newEntry, editEntry, addCatch, rmCatch, setW, setLure, lureCustom, setRating, setPrivate, saveEntry, delEntry, shareCatch, openRecords, exportDiary, importDiary,
     newKit, editKit, kitIcon, kitTarget, addLure, lureQty, rmLure, saveKit, delKit,
     mapView:(v)=>{ ST.mapView=v; MapView.setLayer(v); document.querySelectorAll('.mtoggle button').forEach((b,i)=>b.classList.toggle('on',(i===0)===(v==='satellite'))); },
-    mapPick:(la,lo)=>newPlace({lat:la,lon:lo}), newPlace, placeGeo, savePlace, delPlace,
+    mapPick:(la,lo)=>newPlace({lat:la,lon:lo}), newPlace, placeGeo, savePlace, delPlace, mapCatches:(v)=>{ mapShowCatches=!!v; rerender(); },
   };
 }
