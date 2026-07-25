@@ -568,6 +568,19 @@ function openModal(html){
 }
 function closeModal(){ const m=$('modal'); if(m) m.remove(); }
 
+// онбординг первого запуска
+function maybeOnboard(){
+  try{ if(localStorage.getItem('zorka_onboarded')) return; }catch(e){ return; }
+  openModal(`<h3>🎣 Добро пожаловать в Зорьку!</h3>
+    <div class="onb">
+      <div class="onb-row"><span class="onb-i">🌅</span><div class="onb-t"><b>Прогноз клёва</b><p>Каждый день — что клюёт, когда и на что. По погоде, давлению, луне и воде.</p></div></div>
+      <div class="onb-row"><span class="onb-i">📖</span><div class="onb-t"><b>Дневник</b><p>Записывай уловы — это твоя летопись, и она уточняет прогноз лично для тебя.</p></div></div>
+      <div class="onb-row"><span class="onb-i">🏆</span><div class="onb-t"><b>Сообщество</b><p>Лента уловов + рейтинг приманок «на что реально берёт». Чем нас больше — тем точнее прогноз.</p></div></div>
+    </div>
+    <button class="act" onclick="Z.onboardDone()">Поехали! 🐟</button>`);
+}
+function onboardDone(){ try{ localStorage.setItem('zorka_onboarded','1'); }catch(e){} closeModal(); }
+
 // облако / аккаунт
 let authEmail = '';
 let deferredPrompt = null;
@@ -842,6 +855,7 @@ function delPlace(i){ if(confirm('Удалить место?')){ removePlace(i);
 export function initUI(){
   Notify.ensureWelcome();
   if(typeof window!=='undefined' && window.addEventListener) window.addEventListener('beforeinstallprompt', e=>{ e.preventDefault(); deferredPrompt=e; });
+  if(typeof document!=='undefined' && document.body) setTimeout(maybeOnboard, 900);
   Sync.onSynced(() => rerender());
   if (cloudEnabled() && Cloud.cachedUser()) { Sync.syncOnLogin(); Cloud.ensureProfile().catch(()=>{}); setTimeout(checkEngagement, 1800); }
   if (cloudEnabled()) setTimeout(loadLureStats, 600);
@@ -856,7 +870,7 @@ export function initUI(){
     tab, reload:()=>loadWeather(),
     filter:(f)=>{ ST.filter=f; saveSettings(); rerender(); },
     tf:(el)=>el.classList.toggle('open'),
-    openCity, searchCity, pickCity, geo, closeModal, openNotif, shareForecast,
+    openCity, searchCity, pickCity, geo, closeModal, openNotif, shareForecast, onboardDone,
     openAccount, signIn: acSignIn, setPass: acSetPass, signOut: acSignOut, syncNow: acSyncNow, saveHandle: acSaveHandle, enablePush: acEnablePush, install: promptInstall,
     like: feedLike, comments: openComments, sendComment, delComment, feedMode:(m)=>{ feedFilter=m; rerender(); },
     newEntry, editEntry, addCatch, rmCatch, setW, setLure, lureCustom, setRating, setPrivate, saveEntry, delEntry, shareCatch, openRecords, exportDiary, importDiary,

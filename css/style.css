@@ -223,6 +223,13 @@ button{font-family:inherit}
 .lure-chip.cust{border-style:dashed}
 .pub-toggle{display:flex;align-items:center;gap:8px;margin:14px 0 4px;font-size:13.5px;color:var(--ink);cursor:pointer}
 .pub-toggle input{width:18px;height:18px;flex:none;accent-color:var(--jade);cursor:pointer}
+/* онбординг */
+.onb{margin:6px 0 14px}
+.onb-row{display:flex;gap:12px;align-items:flex-start;padding:10px 0;border-top:1px solid var(--line)}
+.onb-row:first-child{border-top:none}
+.onb-i{font-size:26px;flex:none;line-height:1}
+.onb-t b{font-family:var(--font-serif);font-size:15px}
+.onb-t p{font-size:13px;color:var(--slate);line-height:1.45;margin-top:2px}
 .cl-lure{color:var(--jade);font-size:12px;font-family:var(--font-mono)}
 .tg.real{border-color:var(--brass);color:var(--brass)}
 .tg.real b{color:var(--ink)}
