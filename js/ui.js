@@ -393,12 +393,13 @@ function realLureHTML(species){
   return `<div class="lbl">🔥 Реально берут на <span class="lbl-sub">(по уловам рыбаков)</span></div><div class="tag-row">${chips}</div>`;
 }
 
-let feedNear=false;
+let feedFilter='all';
 function renderFeed(){
   setTimeout(loadFeed, 0);
+  const btn=(m,l)=>`<button class="${feedFilter===m?'on':''}" onclick="Z.feedMode('${m}')">${l}</button>`;
   return `<div class="pad"><div class="mast"><span class="t">Лента уловов</span><span class="d">от рыбаков</span></div>
     <p class="honesty" style="border:none;padding-top:8px;margin-top:8px">Реальные уловы рыбаков. Ставь ❤️ и смотри, что и на что берёт. Чем больше нас — тем точнее прогноз. Места показываются огрублённо.</p>
-    <div class="feed-modes"><button class="${!feedNear?'on':''}" onclick="Z.feedMode(0)">Все</button><button class="${feedNear?'on':''}" onclick="Z.feedMode(1)">📍 Рядом</button></div>
+    <div class="feed-modes">${btn('all','Все')}${btn('near','📍 Рядом')}${btn('mine','Мои')}</div>
     <div id="feedBody"><div class="center" style="min-height:180px"><div class="loader"></div></div></div><div style="height:10px"></div></div>`;
 }
 async function loadFeed(){
@@ -410,13 +411,18 @@ async function loadFeed(){
     const me = Cloud.cachedUser() ? await Cloud.currentUserId() : null;
     const liked = me ? await Cloud.myLikes(items.map(i=>i.id)) : new Set();
     const top = weekTop(items, Date.now(), 3);              // «улов недели» — всегда общий
+    const lead = top.length?leaderboardHTML(top):'';
     let list = items;
-    if(feedNear){
-      if(!ST.city){ box.innerHTML=leaderboardHTML(top)+feedEmpty('Сначала выбери свой город вверху — тогда покажу уловы рядом.'); return; }
+    if(feedFilter==='near'){
+      if(!ST.city){ box.innerHTML=lead+feedEmpty('Сначала выбери свой город вверху — тогда покажу уловы рядом.'); return; }
       list = sortByNear(items, ST.city.lat, ST.city.lon, 200);
-      if(!list.length){ box.innerHTML=(top.length?leaderboardHTML(top):'')+feedEmpty('Рядом (до 200 км) уловов пока нет. Будь первым 🎣'); return; }
+      if(!list.length){ box.innerHTML=lead+feedEmpty('Рядом (до 200 км) уловов пока нет. Будь первым 🎣'); return; }
+    } else if(feedFilter==='mine'){
+      if(!me){ box.innerHTML=lead+feedEmpty('Войди в аккаунт (👤) — и здесь будут только твои уловы.'); return; }
+      list = items.filter(t=>t.user_id===me);
+      if(!list.length){ box.innerHTML=lead+feedEmpty('Ты ещё не делился уловами. Запиши рыбалку в дневнике 🎣'); return; }
     }
-    box.innerHTML = (top.length?leaderboardHTML(top):'') + list.map(it=>feedCard(it, liked.has(it.id), me)).join('');
+    box.innerHTML = lead + list.map(it=>feedCard(it, liked.has(it.id), me)).join('');
   }catch(e){ box.innerHTML=feedEmpty('Не удалось загрузить ленту. '+(e.message||'')); }
 }
 function feedEmpty(msg){ return `<div class="empty"><div class="ei">🎣</div><p>${esc(msg)}</p></div>`; }
@@ -552,6 +558,13 @@ function closeModal(){ const m=$('modal'); if(m) m.remove(); }
 
 // облако / аккаунт
 let authEmail = '';
+let deferredPrompt = null;
+async function promptInstall(){
+  if(deferredPrompt){ deferredPrompt.prompt(); let o={}; try{ o=await deferredPrompt.userChoice; }catch(e){} deferredPrompt=null; if(o.outcome==='accepted') toast('Устанавливается 📲'); return; }
+  const iOS=/iphone|ipad|ipod/i.test(navigator.userAgent||'');
+  if(iOS) alert('На айфоне: нажми «Поделиться» (квадрат со стрелкой ↑) внизу Safari → «На экран «Домой»». Запускай с иконки — так удобнее и работают уведомления.');
+  else alert('В меню браузера (⋮) выбери «Установить приложение» или «Добавить на главный экран».');
+}
 async function openAccount(){
   openModal(`<h3>Мой профиль</h3><div class="center" style="min-height:120px"><div class="loader"></div></div>`);
   const user = await Cloud.currentUser();
@@ -580,6 +593,7 @@ async function openAccount(){
       <div class="field" style="margin-top:14px"><label>Ник в ленте — как тебя видят другие рыбаки</label>
         <input id="ac_handle" maxlength="24" value="${esc(handle)}" placeholder="напр. Щукарь52"></div>
       <button class="act" onclick="Z.saveHandle()">Сохранить ник</button>
+      <button class="act" style="border-color:var(--brass);color:var(--brass);margin-top:10px" onclick="Z.install()">📲 Установить на телефон</button>
       <details class="acc-more"><summary>Аккаунт и синхронизация</summary>
         <p style="font-size:13px;margin-top:8px">Вход выполнен: <b>${esc(user.email||'')}</b></p>
         <div class="field" style="margin-top:10px"><label>Сменить пароль (для входа на других устройствах)</label>
@@ -598,7 +612,8 @@ function accountEmailStep(){
     <p style="font-size:12.5px;color:var(--slate);margin:2px 0 10px">Введи почту и пароль. Нет аккаунта — создастся автоматически. Это включит облако: одинаковые данные на всех устройствах и (дальше) сообщество.</p>
     <div class="field"><label>Почта</label><input id="ac_email" type="email" inputmode="email" autocomplete="email" placeholder="you@mail.ru" value="${esc(authEmail)}"></div>
     <div class="field"><label>Пароль</label><input id="ac_pass" type="password" autocomplete="current-password" placeholder="минимум 6 символов"></div>
-    <button class="act" onclick="Z.signIn()">Войти</button>`;
+    <button class="act" onclick="Z.signIn()">Войти</button>
+    <button class="act" style="border-color:var(--brass);color:var(--brass);margin-top:10px" onclick="Z.install()">📲 Установить на телефон</button>`;
 }
 async function acSignIn(){
   const em=$('ac_email'), pw=$('ac_pass'); if(!em||!pw) return;
@@ -814,6 +829,7 @@ function delPlace(i){ if(confirm('Удалить место?')){ removePlace(i);
 // ── экспорт API для inline-обработчиков ──────────────────────────────────────
 export function initUI(){
   Notify.ensureWelcome();
+  window.addEventListener('beforeinstallprompt', e=>{ e.preventDefault(); deferredPrompt=e; });
   Sync.onSynced(() => rerender());
   if (cloudEnabled() && Cloud.cachedUser()) { Sync.syncOnLogin(); Cloud.ensureProfile().catch(()=>{}); setTimeout(checkEngagement, 1800); }
   if (cloudEnabled()) setTimeout(loadLureStats, 600);
@@ -829,8 +845,8 @@ export function initUI(){
     filter:(f)=>{ ST.filter=f; saveSettings(); rerender(); },
     tf:(el)=>el.classList.toggle('open'),
     openCity, searchCity, pickCity, geo, closeModal, openNotif, shareForecast,
-    openAccount, signIn: acSignIn, setPass: acSetPass, signOut: acSignOut, syncNow: acSyncNow, saveHandle: acSaveHandle, enablePush: acEnablePush,
-    like: feedLike, comments: openComments, sendComment, delComment, feedMode:(n)=>{ feedNear=!!n; rerender(); },
+    openAccount, signIn: acSignIn, setPass: acSetPass, signOut: acSignOut, syncNow: acSyncNow, saveHandle: acSaveHandle, enablePush: acEnablePush, install: promptInstall,
+    like: feedLike, comments: openComments, sendComment, delComment, feedMode:(m)=>{ feedFilter=m; rerender(); },
     newEntry, editEntry, addCatch, rmCatch, setW, setLure, lureCustom, setRating, setPrivate, saveEntry, delEntry, shareCatch, openRecords, exportDiary, importDiary,
     newKit, editKit, kitIcon, kitTarget, addLure, lureQty, rmLure, saveKit, delKit,
     mapView:(v)=>{ ST.mapView=v; MapView.setLayer(v); document.querySelectorAll('.mtoggle button').forEach((b,i)=>b.classList.toggle('on',(i===0)===(v==='satellite'))); },
