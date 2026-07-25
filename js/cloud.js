@@ -163,6 +163,21 @@ export async function fetchFeed(limit = 40) {
   return data || [];
 }
 
+// ── отметки состояния воды от рыбаков ──
+export async function reportWater(state, lat, lon) {
+  const c = await client(); const u = await currentUser(); if (!c || !u) throw new Error('Войди в аккаунт');
+  const round = v => (v != null ? Math.round(v * 100) / 100 : null);
+  const { error } = await c.from('water_reports').insert({ user_id: u.id, state, lat: round(lat), lon: round(lon) });
+  if (error) throw error;
+}
+export async function fetchWaterReports() {
+  const c = await client(); if (!c) return [];
+  const { data, error } = await c.from('water_reports').select('state,lat,lon,created_at')
+    .order('created_at', { ascending: false }).limit(200);
+  if (error) throw error;
+  return data || [];
+}
+
 // статистика приманок «что на что реально берёт» (вью lure_rating)
 export async function fetchLureRating() {
   const c = await client(); if (!c) return [];

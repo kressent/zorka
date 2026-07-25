@@ -242,6 +242,12 @@ button{font-family:inherit}
 .moon-bar i{display:block;height:100%;background:var(--jade)}
 .moon-row.best .moon-bar i{background:var(--brass)}
 .moon-sc{font-family:var(--font-mono);font-size:11px;color:var(--slate);flex:none;width:28px;text-align:right}
+/* отметки воды */
+.wr-line{font-size:12.5px;color:var(--ink);margin:6px 0 8px;line-height:1.5}
+.wr-sub{color:var(--slate);font-size:11px}
+.wr-btns{display:flex;gap:6px;flex-wrap:wrap}
+.wr-btn{flex:1;min-width:90px;background:var(--card);border:1px solid var(--line);color:var(--ink);font:inherit;font-size:12px;padding:7px 6px;cursor:pointer;clip-path:polygon(6px 0,100% 0,100% 100%,0 100%,0 6px)}
+.wr-btn:active{background:rgba(44,110,90,.10)}
 .cl-lure{color:var(--jade);font-size:12px;font-family:var(--font-mono)}
 .tg.real{border-color:var(--brass);color:var(--brass)}
 .tg.real b{color:var(--ink)}

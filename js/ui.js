@@ -20,6 +20,7 @@ import { engagementNotifs } from './engagement.js';
 import { indexLureStats, topLures } from './lurestats.js';
 import { goodDayAlert } from './forecastAlert.js';
 import { sortByNear } from './geo.js';
+import { summarizeWater, WATER_STATES } from './water.js';
 import { personalRecords } from './records.js';
 import { achievements } from './achievements.js';
 import { forecastPost } from './postgen.js';
@@ -98,6 +99,7 @@ export async function loadWeather(){
       const fc=computeForecast(data,{filter:ST.filter,custom:ST.custom,todayIdx:idx,lat:ST.city.lat,lon:ST.city.lon});
       const a=goodDayAlert(fc.upcoming, fc.day.score); if(a){ Notify.addNotif(a); rerender(); }
     }catch(e){}
+    if(cloudEnabled() && !WATER_REPORTS.length) setTimeout(loadWaterReports, 300);
   }catch(e){
     main.innerHTML = `<div class="center"><div class="ic">📡</div><h2>Нет связи</h2><p>Не удалось загрузить погоду и нет сохранённой копии.</p><button class="act" style="max-width:220px" onclick="Z.reload()">Повторить</button></div>`;
     $('tabbar').innerHTML=navHTML();
@@ -192,6 +194,7 @@ function renderForecast(){
       <div class="lbl" style="margin-top:16px">Клёв сегодня</div>
       ${fishHTML || '<p style="color:var(--slate);font-size:13px;margin-top:10px">Нет выбранных видов.</p>'}
       <div class="adv">${esc(fc.advice)}</div>
+      ${waterReportHTML()}
       <div class="lbl" style="margin-top:8px">Прогноз на 2 недели</div>
       ${(fc.bestDay && fc.bestDay.name!=='Сегодня') ? `<div style="font-family:var(--font-serif);font-size:13.5px;color:var(--jade);margin:8px 0 2px">🏆 Лучший день — <b>${esc(fc.bestDay.name)}</b> · ${fc.bestDay.score.toFixed(1)}/5</div>` : `<div style="font-size:12.5px;color:var(--slate);margin:8px 0 2px">🏆 Лучший день — сегодня</div>`}
       <div class="days">${upHTML}</div>
@@ -326,6 +329,29 @@ const RANKS=[
 ];
 function anglerRank(points){ const p=Number(points)||0; let r=RANKS[0]; for(const x of RANKS) if(p>=x.min) r=x; return r; }
 function rankFish(n){ return '<span class="rf">'+'🐟'.repeat(n)+'<span class="rf-off">'+'🐟'.repeat(5-n)+'</span></span>'; }
+
+// ── отметки воды от рыбаков ──
+let WATER_REPORTS = [];
+async function loadWaterReports(){ if(!cloudEnabled()) return; try{ WATER_REPORTS=await Cloud.fetchWaterReports(); rerender(); }catch(e){} }
+function waterReportHTML(){
+  if(!cloudEnabled()) return '';
+  const sum = ST.city ? summarizeWater(WATER_REPORTS, ST.city.lat, ST.city.lon, {maxKm:100, days:5}) : {counts:{clear:0,murky:0,flood:0},total:0,dominant:null};
+  let line;
+  if(sum.total){
+    const parts=['flood','murky','clear'].filter(k=>sum.counts[k]).map(k=>`${WATER_STATES[k].icon} ${WATER_STATES[k].label} · ${sum.counts[k]}`);
+    line=`Рядом отмечают: ${parts.join('   ')} <span class="wr-sub">(за 5 дней, до 100 км)</span>`;
+  } else line=`Пока никто не отмечал воду рядом. Отметь первым — поможешь другим рыбакам.`;
+  const btn=(s)=>`<button class="wr-btn wr-${s}" onclick="Z.reportWater('${s}')">${WATER_STATES[s].icon} ${WATER_STATES[s].label}</button>`;
+  return `<div class="lbl" style="margin-top:16px">🌊 Вода сейчас — от рыбаков</div>
+    <div class="wr-line">${line}</div>
+    <div class="wr-btns">${btn('clear')}${btn('murky')}${btn('flood')}</div>`;
+}
+async function reportWater(state){
+  if(!Cloud.cachedUser()){ toast('Войди в аккаунт (👤), чтобы отметить воду'); openAccount(); return; }
+  if(!ST.city){ toast('Сначала выбери город'); return; }
+  try{ await Cloud.reportWater(state, ST.city.lat, ST.city.lon); toast('Спасибо! Отметка учтена 🌊'); loadWaterReports(); }
+  catch(e){ toast('Не удалось: '+(e.message||e)); }
+}
 
 // ── рейтинг приманок «что на что реально берёт» (маховик данных) ──
 let LURE_STATS = {};
@@ -886,7 +912,7 @@ export function initUI(){
     tab, reload:()=>loadWeather(),
     filter:(f)=>{ ST.filter=f; saveSettings(); rerender(); },
     tf:(el)=>el.classList.toggle('open'),
-    openCity, searchCity, pickCity, geo, closeModal, openNotif, shareForecast, onboardDone, openMoon,
+    openCity, searchCity, pickCity, geo, closeModal, openNotif, shareForecast, onboardDone, openMoon, reportWater,
     openAccount, signIn: acSignIn, setPass: acSetPass, signOut: acSignOut, syncNow: acSyncNow, saveHandle: acSaveHandle, enablePush: acEnablePush, install: promptInstall,
     like: feedLike, comments: openComments, sendComment, delComment, feedMode:(m)=>{ feedFilter=m; rerender(); }, feedSp:(s)=>{ feedSpecies=(s&&s!==feedSpecies)?s:null; loadFeed(); },
     newEntry, editEntry, addCatch, rmCatch, setW, setLure, lureCustom, setRating, setPrivate, saveEntry, delEntry, shareCatch, openRecords, exportDiary, importDiary,
