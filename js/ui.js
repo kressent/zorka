@@ -720,10 +720,12 @@ function openNotif(){
   const body = items.length
     ? items.map(n=>`<div class="notif${n.read?'':' unread'}"><div class="nt">${esc(n.title)}</div><div class="nb">${esc(n.body)}</div></div>`).join('')
     : `<div class="empty"><div class="ei">🔔</div><p>Пока уведомлений нет. Здесь будут запреты (нерест), жор и важное по твоему водоёму.</p></div>`;
-  openModal(`<h3>Уведомления</h3>${body}`);
+  const clr = items.length ? `<button class="act" style="padding:6px;font-size:12px;margin:0 0 10px;border-color:var(--slate);color:var(--slate)" onclick="Z.clearNotifs()">Очистить всё</button>` : '';
+  openModal(`<h3>Уведомления</h3>${clr}${body}`);
   Notify.markAllRead();
   rerender();
 }
+function clearNotifs(){ Notify.clearAll(); closeModal(); rerender(); }
 
 // город
 function openCity(){
@@ -912,7 +914,7 @@ export function initUI(){
     tab, reload:()=>loadWeather(),
     filter:(f)=>{ ST.filter=f; saveSettings(); rerender(); },
     tf:(el)=>el.classList.toggle('open'),
-    openCity, searchCity, pickCity, geo, closeModal, openNotif, shareForecast, onboardDone, openMoon, reportWater,
+    openCity, searchCity, pickCity, geo, closeModal, openNotif, shareForecast, onboardDone, openMoon, reportWater, clearNotifs,
     openAccount, signIn: acSignIn, setPass: acSetPass, signOut: acSignOut, syncNow: acSyncNow, saveHandle: acSaveHandle, enablePush: acEnablePush, install: promptInstall,
     like: feedLike, comments: openComments, sendComment, delComment, feedMode:(m)=>{ feedFilter=m; rerender(); }, feedSp:(s)=>{ feedSpecies=(s&&s!==feedSpecies)?s:null; loadFeed(); },
     newEntry, editEntry, addCatch, rmCatch, setW, setLure, lureCustom, setRating, setPrivate, saveEntry, delEntry, shareCatch, openRecords, exportDiary, importDiary,

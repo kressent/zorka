@@ -16,7 +16,14 @@
   <circle cx="256" cy="300" r="98" fill="#f0c060" opacity="0.4"/>
   <rect y="300" width="512" height="212" fill="url(#water)"/>
   <rect x="234" y="300" width="44" height="212" fill="#ffe08a" opacity="0.22"/>
-  <path d="M0,360 Q64,346 128,360 T256,360 T384,360 T512,360" stroke="#9bd8c5" stroke-width="7" fill="none" opacity="0.55"/>
-  <path d="M0,414 Q80,400 160,414 T320,414 T512,414" stroke="#9bd8c5" stroke-width="7" fill="none" opacity="0.4"/>
-  <path d="M0,462 Q96,450 192,462 T384,462 T576,462" stroke="#9bd8c5" stroke-width="7" fill="none" opacity="0.28"/>
+  <!-- рыба (силуэт) -->
+  <g fill="#0c2a24">
+    <path d="M150,388 C185,344 285,344 330,382 C342,360 366,352 388,350 C376,372 376,404 388,426 C366,424 342,416 330,394 C285,432 185,432 150,388 Z"/>
+  </g>
+  <circle cx="196" cy="380" r="9" fill="#EFE9DB"/>
+  <circle cx="196" cy="380" r="4" fill="#0c2a24"/>
+  <!-- волны -->
+  <path d="M0,360 Q64,346 128,360 T256,360 T384,360 T512,360" stroke="#9bd8c5" stroke-width="7" fill="none" opacity="0.5"/>
+  <path d="M0,430 Q80,416 160,430 T320,430 T512,430" stroke="#9bd8c5" stroke-width="7" fill="none" opacity="0.32"/>
+  <path d="M0,474 Q96,462 192,474 T384,474 T576,474" stroke="#9bd8c5" stroke-width="7" fill="none" opacity="0.22"/>
 </svg>

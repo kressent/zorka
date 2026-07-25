@@ -13,6 +13,8 @@ export function unread() { return getNotifs().filter(n => !n.read).length; }
 
 export function markAllRead() { const l = getNotifs(); let ch = false; l.forEach(n => { if (!n.read) { n.read = true; ch = true; } }); if (ch) save(l); }
 
+export function clearAll() { save([]); }
+
 // добавить уведомление (идемпотентно по id)
 export function addNotif(n) {
   const l = getNotifs();
