@@ -1,0 +1,55 @@
+// Тест личных рекордов и достижений (чистые функции).
+import assert from 'node:assert';
+import { personalRecords } from '../js/records.js';
+import { achievements } from '../js/achievements.js';
+
+let pass = 0, fail = 0;
+const check = (name, fn) => { try { fn(); console.log('  ✓ ' + name); pass++; }
+  catch (e) { console.log('  ✗ ' + name + ' — ' + e.message); fail++; } };
+
+console.log('\nЗорька · тест рекордов и достижений\n');
+
+const entries = [
+  { date: '2026-07-24', catches: [
+    { species: 'pike',  weight: 5200, lure: 'воблер' },   // трофей (порог 5000)
+    { species: 'perch', weight: 200,  lure: 'воблер' },
+  ]},
+  { date: '2026-07-25', catches: [
+    { species: 'perch', weight: 300,  lure: 'микроджиг' },
+    { species: 'pike',  weight: 1000, lure: 'воблер' },
+  ]},
+];
+
+check('personalRecords — итоги и рекорды', () => {
+  const r = personalRecords(entries);
+  assert.equal(r.totalFish, 4);
+  assert.equal(r.totalG, 6700);
+  assert.equal(r.trophies, 1);
+  assert.equal(r.days, 2);
+  assert.equal(r.speciesCount, 2);
+  assert.equal(r.favLure.lure, 'воблер');
+  assert.equal(r.favLure.n, 3);
+  assert.equal(r.personalBest.species, 'pike');
+  assert.equal(r.personalBest.weight, 5200);
+  assert.equal(r.biggest.perch.weight, 300);
+});
+
+check('personalRecords — пустой дневник', () => {
+  const r = personalRecords([]);
+  assert.equal(r.totalFish, 0);
+  assert.equal(r.favLure, null);
+  assert.equal(r.personalBest, null);
+});
+
+check('achievements — открытые/закрытые бейджи', () => {
+  const a = achievements(entries);
+  const by = Object.fromEntries(a.map(x => [x.id, x]));
+  assert.equal(by.first.done, true);
+  assert.equal(by.trophy1.done, true);
+  assert.equal(by.ten.done, false);
+  assert.equal(by.ten.cur, 4);
+  assert.equal(by.sp5.done, false);
+});
+
+console.log('\nИтог: ' + pass + ' ✓, ' + fail + ' ✗\n');
+if (fail) process.exit(1);

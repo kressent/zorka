@@ -20,6 +20,8 @@ import { engagementNotifs } from './engagement.js';
 import { indexLureStats, topLures } from './lurestats.js';
 import { goodDayAlert } from './forecastAlert.js';
 import { sortByNear } from './geo.js';
+import { personalRecords } from './records.js';
+import { achievements } from './achievements.js';
 import { cloudEnabled } from './config.js';
 
 // ── помощники ────────────────────────────────────────────────────────────────
@@ -215,7 +217,7 @@ function renderDiary(){
     }).join('');
     const d = new Date(e.date+'T12:00:00');
     return `<div class="entry">
-      <div class="ed"><span class="dt">${d.getDate()} ${MONTHS_GEN[d.getMonth()]}, ${DOW[d.getDay()].toLowerCase()}</span>
+      <div class="ed"><span class="dt">${d.getDate()} ${MONTHS_GEN[d.getMonth()]}, ${DOW[d.getDay()].toLowerCase()}${e.private?' <span title="только для тебя">🔒</span>':''}</span>
         <span class="st">${'★'.repeat(e.rating||0)}${'☆'.repeat(5-(e.rating||0))}</span></div>
       ${(e.spot||e.forecast)?`<div class="em">${e.spot?`<span class="mchip">${esc(e.spot)}</span>`:''}${e.forecast?`<span class="mchip">${e.forecast.avgP||''} мм</span><span class="mchip">${e.forecast.maxT}°</span>`:''}</div>`:''}
       ${cnt?`<div class="catchlist">${catches}<div class="cl tot"><span class="cn">Итого · ${cnt} ${cnt===1?'рыба':'рыб'}</span><span class="cw">${w?fmtW(w):'—'}</span></div></div>`
@@ -230,6 +232,7 @@ function renderDiary(){
 
   return `<div class="pad"><div class="mast"><span class="t">Дневник</span><span class="d">сезон ${new Date().getFullYear()}</span></div>
     ${statHTML}
+    <button class="act" style="margin-top:12px;border-color:var(--brass);color:var(--brass)" onclick="Z.openRecords()">🏆 Мои рекорды и достижения</button>
     <div class="lbl" style="margin-top:18px">Записи</div>
     ${entriesHTML}
     <button class="act" onclick="Z.newEntry()">＋ Записать рыбалку</button><div style="height:10px"></div></div>`;
@@ -314,6 +317,28 @@ let LURE_STATS = {};
 async function loadLureStats(){
   if(!cloudEnabled()) return;
   try{ LURE_STATS = indexLureStats(await Cloud.fetchLureRating()); rerender(); }catch(e){}
+}
+function fmtDate(iso){ try{ const d=new Date(iso+'T12:00:00'); return d.getDate()+' '+MONTHS_GEN[d.getMonth()]; }catch(e){ return ''; } }
+function openRecords(){
+  const entries = Diary.getEntries();
+  const r = personalRecords(entries);
+  const ach = achievements(entries);
+  const done = ach.filter(a=>a.done).length;
+  const pb = r.personalBest;
+  const recHTML = `
+    <div class="prof-stats prof-stats-3">
+      <div><b>${r.totalFish}</b><span>рыб</span></div>
+      <div><b>${r.speciesCount}</b><span>видов</span></div>
+      <div><b>${r.trophies}</b><span>трофеев</span></div>
+    </div>
+    ${pb?`<div class="rec-line">🥇 Личный рекорд: <b>${esc(pb.name)} ${fmtW(pb.weight)}</b>${pb.date?` · ${fmtDate(pb.date)}`:''}</div>`:''}
+    ${r.favLure?`<div class="rec-line">🎣 Любимая приманка: <b>${esc(r.favLure.lure)}</b> · ${r.favLure.n}</div>`:''}
+    ${r.topSpecies?`<div class="rec-line">🐟 Чаще всего: <b>${esc(r.topSpecies.name)}</b> · ${r.topSpecies.n}</div>`:''}
+    <div class="rec-line">📅 Дней на воде: <b>${r.days}</b> · всего <b>${(r.totalG/1000).toFixed(1)} кг</b></div>`;
+  const achHTML = ach.map(a=>`<div class="ach${a.done?' on':''}"><span class="ach-i">${a.icon}</span><span class="ach-n">${esc(a.name)}</span><span class="ach-p">${a.done?'✓':a.cur+'/'+a.need}</span></div>`).join('');
+  openModal(`<h3>🏆 Рекорды и достижения</h3>${recHTML}
+    <div class="lbl" style="margin-top:16px">Достижения · ${done}/${ach.length}</div>
+    <div class="ach-grid">${achHTML}</div>`);
 }
 function realLureHTML(species){
   const top = topLures(LURE_STATS, species, 3);
@@ -760,7 +785,7 @@ export function initUI(){
     openCity, searchCity, pickCity, geo, closeModal, openNotif,
     openAccount, signIn: acSignIn, setPass: acSetPass, signOut: acSignOut, syncNow: acSyncNow, saveHandle: acSaveHandle, enablePush: acEnablePush,
     like: feedLike, comments: openComments, sendComment, delComment, feedMode:(n)=>{ feedNear=!!n; rerender(); },
-    newEntry, editEntry, addCatch, rmCatch, setW, setLure, lureCustom, setRating, setPrivate, saveEntry, delEntry, shareCatch,
+    newEntry, editEntry, addCatch, rmCatch, setW, setLure, lureCustom, setRating, setPrivate, saveEntry, delEntry, shareCatch, openRecords,
     newKit, editKit, kitIcon, kitTarget, addLure, lureQty, rmLure, saveKit, delKit,
     mapView:(v)=>{ ST.mapView=v; MapView.setLayer(v); document.querySelectorAll('.mtoggle button').forEach((b,i)=>b.classList.toggle('on',(i===0)===(v==='satellite'))); },
     mapPick:(la,lo)=>newPlace({lat:la,lon:lo}), newPlace, placeGeo, savePlace, delPlace,
