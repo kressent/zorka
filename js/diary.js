@@ -29,6 +29,9 @@ export function upsertEntry(entry) {
 
 export function deleteEntry(id) { save(getEntries().filter(e => e.id !== id)); }
 
+// восстановление из резервной копии (импорт дневника)
+export function replaceEntries(list) { save(Array.isArray(list) ? list : []); }
+
 // суммарный вес улова записи (только взвешенные)
 export function entryWeight(entry) {
   return (entry.catches || []).reduce((s, c) => s + (c.weight || 0), 0);

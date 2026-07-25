@@ -9,6 +9,7 @@ export function getKits() {
   try { return JSON.parse(localStorage.getItem(KEY) || '[]'); } catch (e) { return []; }
 }
 function save(list) { try { localStorage.setItem(KEY, JSON.stringify(list)); } catch (e) {} }
+export function replaceKits(list) { save(Array.isArray(list) ? list : []); }
 
 // kit: {id, name, icon, rod, reel, line, target:[ids], lures:[{name,type,color,qty,minQty}]}
 export function upsertKit(kit) {

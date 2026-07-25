@@ -6,7 +6,7 @@ import { computeForecast } from './score.js';
 import { fetchWeather, todayIndex } from './weather.js';
 import { moonInfo } from './astro.js';
 import { CITIES, searchCities, nearestCity, geolocate,
-         getPlaces, addPlace, removePlace } from './locations.js';
+         getPlaces, addPlace, removePlace, savePlaces } from './locations.js';
 import * as Diary from './diary.js';
 import * as Tackle from './tackle.js';
 import { makeCatchCard, shareCard } from './catchcard.js';
@@ -353,7 +353,8 @@ function openRecords(){
   openModal(`<h3>🏆 Рекорды и достижения</h3>${recHTML}
     <div class="lbl" style="margin-top:16px">Достижения · ${done}/${ach.length}</div>
     <div class="ach-grid">${achHTML}</div>
-    <button class="act" style="margin-top:16px" onclick="Z.exportDiary()">📥 Скачать дневник (резервная копия)</button>`);
+    <button class="act" style="margin-top:16px" onclick="Z.exportDiary()">📥 Скачать дневник (резервная копия)</button>
+    <button class="act" style="margin-top:8px" onclick="Z.importDiary()">📤 Восстановить из файла</button>`);
 }
 function exportDiary(){
   try{
@@ -365,6 +366,23 @@ function exportDiary(){
     setTimeout(()=>URL.revokeObjectURL(url), 5000);
     toast('Дневник сохранён в файл 📥');
   }catch(e){ toast('Не удалось экспортировать'); }
+}
+function importDiary(){
+  const inp=document.createElement('input'); inp.type='file'; inp.accept='.json,application/json';
+  inp.onchange=()=>{ const f=inp.files&&inp.files[0]; if(!f) return;
+    const r=new FileReader();
+    r.onload=()=>{ try{
+      const d=JSON.parse(r.result);
+      if(!d || !Array.isArray(d.entries)) throw new Error('это не файл дневника Зорьки');
+      if(!confirm('Восстановить дневник из файла? Текущие записи, места и снасти будут заменены.')) return;
+      Diary.replaceEntries(d.entries);
+      if(Array.isArray(d.places)) savePlaces(d.places);
+      if(Array.isArray(d.kits)) Tackle.replaceKits(d.kits);
+      closeModal(); rerender(); Sync.pushSoon(); toast('Дневник восстановлен ✅');
+    }catch(e){ alert('Не удалось прочитать файл: '+(e.message||e)); } };
+    r.readAsText(f);
+  };
+  inp.click();
 }
 function realLureHTML(species){
   const top = topLures(LURE_STATS, species, 3);
@@ -811,7 +829,7 @@ export function initUI(){
     openCity, searchCity, pickCity, geo, closeModal, openNotif, shareForecast,
     openAccount, signIn: acSignIn, setPass: acSetPass, signOut: acSignOut, syncNow: acSyncNow, saveHandle: acSaveHandle, enablePush: acEnablePush,
     like: feedLike, comments: openComments, sendComment, delComment, feedMode:(n)=>{ feedNear=!!n; rerender(); },
-    newEntry, editEntry, addCatch, rmCatch, setW, setLure, lureCustom, setRating, setPrivate, saveEntry, delEntry, shareCatch, openRecords, exportDiary,
+    newEntry, editEntry, addCatch, rmCatch, setW, setLure, lureCustom, setRating, setPrivate, saveEntry, delEntry, shareCatch, openRecords, exportDiary, importDiary,
     newKit, editKit, kitIcon, kitTarget, addLure, lureQty, rmLure, saveKit, delKit,
     mapView:(v)=>{ ST.mapView=v; MapView.setLayer(v); document.querySelectorAll('.mtoggle button').forEach((b,i)=>b.classList.toggle('on',(i===0)===(v==='satellite'))); },
     mapPick:(la,lo)=>newPlace({lat:la,lon:lo}), newPlace, placeGeo, savePlace, delPlace,

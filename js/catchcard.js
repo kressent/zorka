@@ -65,6 +65,11 @@ export async function makeCatchCard(entry, cityName) {
       g.fillText(fmtW(heavy.weight), cx, y + 66);
       y += 66;
     }
+    if (heavy.lure) {
+      g.fillStyle = SLATE; g.font = `italic 30px ${SERIF}`;
+      g.fillText('на ' + heavy.lure, cx, y + 46);
+      y += 46;
+    }
   } else {
     g.fillStyle = INK; g.font = `700 64px ${SERIF}`;
     g.fillText('Был на рыбалке', cx, y);
