@@ -19,6 +19,7 @@ import { weekTop, tripHeaviest } from './leaderboard.js';
 import { engagementNotifs } from './engagement.js';
 import { indexLureStats, topLures } from './lurestats.js';
 import { goodDayAlert } from './forecastAlert.js';
+import { sortByNear } from './geo.js';
 import { cloudEnabled } from './config.js';
 
 // ── помощники ────────────────────────────────────────────────────────────────
@@ -321,10 +322,12 @@ function realLureHTML(species){
   return `<div class="lbl">🔥 Реально берут на <span class="lbl-sub">(по уловам рыбаков)</span></div><div class="tag-row">${chips}</div>`;
 }
 
+let feedNear=false;
 function renderFeed(){
   setTimeout(loadFeed, 0);
   return `<div class="pad"><div class="mast"><span class="t">Лента уловов</span><span class="d">от рыбаков</span></div>
     <p class="honesty" style="border:none;padding-top:8px;margin-top:8px">Реальные уловы рыбаков. Ставь ❤️ и смотри, что и на что берёт. Чем больше нас — тем точнее прогноз. Места показываются огрублённо.</p>
+    <div class="feed-modes"><button class="${!feedNear?'on':''}" onclick="Z.feedMode(0)">Все</button><button class="${feedNear?'on':''}" onclick="Z.feedMode(1)">📍 Рядом</button></div>
     <div id="feedBody"><div class="center" style="min-height:180px"><div class="loader"></div></div></div><div style="height:10px"></div></div>`;
 }
 async function loadFeed(){
@@ -335,8 +338,14 @@ async function loadFeed(){
     if(!items.length){ box.innerHTML=feedEmpty('Пока пусто. Запиши улов в дневнике — и он появится тут (для всех, место огрублённо).'); return; }
     const me = Cloud.cachedUser() ? await Cloud.currentUserId() : null;
     const liked = me ? await Cloud.myLikes(items.map(i=>i.id)) : new Set();
-    const top = weekTop(items, Date.now(), 3);
-    box.innerHTML = (top.length?leaderboardHTML(top):'') + items.map(it=>feedCard(it, liked.has(it.id), me)).join('');
+    const top = weekTop(items, Date.now(), 3);              // «улов недели» — всегда общий
+    let list = items;
+    if(feedNear){
+      if(!ST.city){ box.innerHTML=leaderboardHTML(top)+feedEmpty('Сначала выбери свой город вверху — тогда покажу уловы рядом.'); return; }
+      list = sortByNear(items, ST.city.lat, ST.city.lon, 200);
+      if(!list.length){ box.innerHTML=(top.length?leaderboardHTML(top):'')+feedEmpty('Рядом (до 200 км) уловов пока нет. Будь первым 🎣'); return; }
+    }
+    box.innerHTML = (top.length?leaderboardHTML(top):'') + list.map(it=>feedCard(it, liked.has(it.id), me)).join('');
   }catch(e){ box.innerHTML=feedEmpty('Не удалось загрузить ленту. '+(e.message||'')); }
 }
 function feedEmpty(msg){ return `<div class="empty"><div class="ei">🎣</div><p>${esc(msg)}</p></div>`; }
@@ -351,7 +360,8 @@ function feedCard(it, mine, myId){
   const rk=anglerRank(it.points);
   const who=`<div class="fc-who"><span class="fc-name">${esc(it.handle||'Рыбак')}</span>${rankFish(rk.n)}<span class="fc-title">${rk.t}</span></div>`;
   const place=it.water_name?esc(it.water_name):'';
-  const head=`<div class="tc-head">${place?`<b>${place}</b>`:''}${(place&&dl)?'<span class="tc-dot">·</span>':''}${dl?`<span>${dl}</span>`:''}</div>`;
+  const km=it._km!=null?`${(place||dl)?'<span class="tc-dot">·</span>':''}<span>~${it._km} км</span>`:'';
+  const head=`<div class="tc-head">${place?`<b>${place}</b>`:''}${(place&&dl)?'<span class="tc-dot">·</span>':''}${dl?`<span>${dl}</span>`:''}${km}</div>`;
   const isMine = myId && it.user_id===myId;
   const like = isMine
     ? `<div class="tc-own">❤ <span class="lc">${it.likes||0}</span> · твой улов</div>`
@@ -749,7 +759,7 @@ export function initUI(){
     tf:(el)=>el.classList.toggle('open'),
     openCity, searchCity, pickCity, geo, closeModal, openNotif,
     openAccount, signIn: acSignIn, setPass: acSetPass, signOut: acSignOut, syncNow: acSyncNow, saveHandle: acSaveHandle, enablePush: acEnablePush,
-    like: feedLike, comments: openComments, sendComment, delComment,
+    like: feedLike, comments: openComments, sendComment, delComment, feedMode:(n)=>{ feedNear=!!n; rerender(); },
     newEntry, editEntry, addCatch, rmCatch, setW, setLure, lureCustom, setRating, setPrivate, saveEntry, delEntry, shareCatch,
     newKit, editKit, kitIcon, kitTarget, addLure, lureQty, rmLure, saveKit, delKit,
     mapView:(v)=>{ ST.mapView=v; MapView.setLayer(v); document.querySelectorAll('.mtoggle button').forEach((b,i)=>b.classList.toggle('on',(i===0)===(v==='satellite'))); },
