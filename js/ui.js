@@ -5,7 +5,7 @@ import { SPECIES, byId, isTrophy } from './data.js';
 import { computeForecast } from './score.js';
 import { fetchWeather, todayIndex } from './weather.js';
 import { moonInfo } from './astro.js';
-import { CITIES, searchCities, nearestCity, geolocate,
+import { CITIES, searchCities, nearestCity, geolocate, geoSearch, reverseGeocode,
          getPlaces, addPlace, removePlace, savePlaces } from './locations.js';
 import * as Diary from './diary.js';
 import * as Tackle from './tackle.js';
@@ -756,28 +756,52 @@ function clearNotifs(){ Notify.clearAll(); closeModal(); rerender(); }
 
 // город
 function openCity(){
-  openModal(`<h3>Выбор места</h3>
-    <div class="field"><input id="citySearch" placeholder="Поиск города…" oninput="Z.searchCity(this.value)" autocomplete="off"></div>
-    <button class="act" style="border-color:var(--jade);color:var(--jade);margin-top:10px" onclick="Z.geo()">📍 По моей геолокации</button>
-    <div id="cityResults" style="margin-top:10px"></div>`);
+  openModal(`<h3>Где ты / куда едешь</h3>
+    <div class="field"><input id="citySearch" placeholder="Город, посёлок, село, деревня…" oninput="Z.searchCity(this.value)" autocomplete="off"></div>
+    <button class="act" style="border-color:var(--jade);color:var(--jade)" onclick="Z.geo()">📍 По моей геолокации</button>
+    <div id="cityResults" style="margin-top:10px"></div>
+    <div class="lbl" style="margin-top:14px">Или ткни точку прямо на карте</div>
+    <div id="cityMap" style="height:220px;border:1px solid var(--rule);background:#dfe6e0;z-index:0;margin-top:6px"></div>
+    <p style="font-size:11px;color:var(--slate);margin-top:6px">Тап по карте поставит прогноз ровно туда, где ты — хоть на конкретный омут.</p>`);
   searchCity('');
   setTimeout(()=>{ const el=$('citySearch'); if(el) el.focus(); }, 200);
+  const center = ST.city ? {lat:ST.city.lat,lon:ST.city.lon} : {lat:54.0,lon:56.0};
+  setTimeout(()=>MapView.initMap('cityMap', center, [], (la,lo)=>Z.cityPick(la,lo), ST.mapView||'satellite'), 80);
+}
+let citySearchTimer=null;
+function cityItemsHTML(list){
+  return (list||[]).map(c=>`<div class="city-item" onclick="Z.pickCity('${escJs(c.n)}','${escJs(c.c||'')}',${c.lat},${c.lon})"><span>${esc(c.n)}</span><span class="city-sub">${esc(c.c||'')}</span></div>`).join('');
 }
 function searchCity(q){
   const box=$('cityResults'); if(!box) return;
-  box.innerHTML = searchCities(q).map(c=>`<div class="city-item" onclick="Z.pickCity('${esc(c.n)}','${esc(c.c)}',${c.lat},${c.lon})"><span>${esc(c.n)}</span><span class="city-sub">${esc(c.c)}</span></div>`).join('');
+  const local = searchCities(q);
+  box.innerHTML = cityItemsHTML(local);
+  clearTimeout(citySearchTimer);
+  if(String(q||'').trim().length<2) return;
+  citySearchTimer=setTimeout(async ()=>{
+    const inp=$('citySearch'); if(inp && inp.value.trim()!==String(q).trim()) return; // ввод устарел
+    const res = await geoSearch(q);
+    const b=$('cityResults'); if(!b) return;
+    if(res.length) b.innerHTML = cityItemsHTML(res);
+    else if(!local.length) b.innerHTML = '<p style="font-size:12.5px;color:var(--slate);padding:8px 2px">Ничего не нашлось. Попробуй иначе или ткни точку на карте ниже.</p>';
+  }, 550);
 }
 function pickCity(name,country,lat,lon){
-  ST.city={name,country,lat,lon}; ST.weather=null; saveSettings();
-  addPlace({name,country,lat,lon}); closeModal(); loadWeather();
+  ST.city={name,country,lat,lon}; ST.weather=null; saveSettings(); closeModal(); loadWeather();
 }
 async function geo(){
   try{
     const {lat,lon}=await geolocate();
-    const near=nearestCity(lat,lon);
-    ST.city={name:near?near.n:'Моё место',country:near?near.c:'',lat,lon};
+    let p=null; try{ p=await reverseGeocode(lat,lon); }catch(e){}
+    if(!p){ const near=nearestCity(lat,lon); p={n:near?near.n:'Моё место',c:near?near.c:''}; }
+    ST.city={name:p.n,country:p.c||'',lat,lon};
     ST.weather=null; saveSettings(); closeModal(); loadWeather();
-  }catch(e){ alert('Не удалось определить геолокацию. Выбери город вручную.'); }
+  }catch(e){ alert('Не удалось определить геолокацию. Разреши доступ к геопозиции или ткни точку на карте.'); }
+}
+async function cityPick(lat,lon){
+  let p=null; try{ p=await reverseGeocode(lat,lon); }catch(e){}
+  ST.city={ name: p?p.n:'Точка на карте', country: p?(p.c||''):'', lat, lon };
+  ST.weather=null; saveSettings(); closeModal(); loadWeather();
 }
 
 // дневник — запись
@@ -951,7 +975,7 @@ export function initUI(){
     tab, reload:()=>loadWeather(),
     filter:(f)=>{ ST.filter=f; saveSettings(); rerender(); },
     tf:(el)=>el.classList.toggle('open'),
-    openCity, searchCity, pickCity, geo, closeModal, openNotif, shareForecast, onboardDone, openMoon, openDay, reportWater, clearNotifs,
+    openCity, searchCity, pickCity, cityPick, geo, closeModal, openNotif, shareForecast, onboardDone, openMoon, openDay, reportWater, clearNotifs,
     openAccount, signIn: acSignIn, setPass: acSetPass, signOut: acSignOut, syncNow: acSyncNow, saveHandle: acSaveHandle, enablePush: acEnablePush, install: promptInstall,
     like: feedLike, comments: openComments, sendComment, delComment, feedMode:(m)=>{ feedFilter=m; rerender(); }, feedSp:(s)=>{ feedSpecies=(s&&s!==feedSpecies)?s:null; loadFeed(); },
     newEntry, editEntry, addCatch, rmCatch, setW, setLure, lureCustom, setRating, setPrivate, setDate, saveEntry, delEntry, shareCatch, openRecords, exportDiary, importDiary,

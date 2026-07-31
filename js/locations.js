@@ -41,6 +41,39 @@ export function nearestCity(lat, lon) {
   return best;
 }
 
+// ── геокодинг (OpenStreetMap / Nominatim, бесплатно, деревни и сёла тоже) ──
+function shortName(x) {
+  const a = x.address || {};
+  return a.village || a.hamlet || a.town || a.city || a.municipality || a.suburb
+      || a.county || a.state_district || x.name || (x.display_name || '').split(',')[0] || 'Точка';
+}
+
+// поиск любого населённого пункта (город/село/деревня) по названию
+export async function geoSearch(q) {
+  q = String(q || '').trim();
+  if (q.length < 2) return [];
+  const url = 'https://nominatim.openstreetmap.org/search?format=jsonv2&addressdetails=1&limit=8'
+    + '&accept-language=ru&countrycodes=ru,by,kz,ua,uz,kg&q=' + encodeURIComponent(q);
+  try {
+    const r = await fetch(url, { headers: { 'Accept': 'application/json' } });
+    if (!r.ok) return [];
+    const j = await r.json();
+    return (j || []).map(x => ({ n: shortName(x), c: (x.display_name || '').replace(/^[^,]+,\s*/, '').slice(0, 70), lat: +x.lat, lon: +x.lon }));
+  } catch (e) { return []; }
+}
+
+// обратный геокодинг: координаты → ближайший населённый пункт (для геолокации/тапа)
+export async function reverseGeocode(lat, lon) {
+  const url = 'https://nominatim.openstreetmap.org/reverse?format=jsonv2&addressdetails=1&zoom=12&accept-language=ru'
+    + '&lat=' + lat + '&lon=' + lon;
+  try {
+    const r = await fetch(url, { headers: { 'Accept': 'application/json' } });
+    if (!r.ok) return null;
+    const j = await r.json();
+    return { n: shortName(j), c: (j.display_name || '').slice(0, 70), lat, lon };
+  } catch (e) { return null; }
+}
+
 // сохранённые места пользователя
 export function getPlaces() {
   try { return JSON.parse(localStorage.getItem(PLACES_KEY) || '[]'); } catch (e) { return []; }
@@ -63,7 +96,7 @@ export function geolocate() {
     navigator.geolocation.getCurrentPosition(
       pos => resolve({ lat: pos.coords.latitude, lon: pos.coords.longitude }),
       err => reject(err),
-      { enableHighAccuracy: false, timeout: 8000, maximumAge: 600000 }
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 120000 }
     );
   });
 }
