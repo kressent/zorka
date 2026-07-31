@@ -784,6 +784,7 @@ function renderEntry(){
       <div class="lure-chips"><span class="lure-lbl">на что:</span>${chips}<button class="lure-chip cust${customOn?' on':''}" onclick="Z.lureCustom(${i})">${customOn?esc(c.lure):'+ своё'}</button></div>`; }).join('');
   const stars = [1,2,3,4,5].map(i=>`<span class="${(draft.rating||0)>=i?'on':''}" onclick="Z.setRating(${i})">★</span>`).join('');
   openModal(`<h3>${ruDateFull(d)}</h3>
+    <div class="field"><label>Дата рыбалки</label><input type="date" id="e_date" value="${draft.date}" max="${new Date().toISOString().slice(0,10)}" onchange="Z.setDate(this.value)"></div>
     <div class="field"><label>Место (по желанию)</label><input id="e_spot" value="${esc(draft.spot||'')}" placeholder="напр. Устье Нугуша"></div>
     <div class="field"><label>Что поймал — по каждой рыбе свой вес</label><div class="fishpick">${picker}</div></div>
     <div id="catchRows">${rows||'<p style="font-size:12px;color:var(--slate);margin:6px 0">Нажми на рыбу выше, чтобы добавить. Вес пустой = «не взвешивал».</p>'}</div>
@@ -808,14 +809,23 @@ function setLure(i,l){ if(!draft||!draft.catches[i]) return; syncEntryFields(); 
 function lureCustom(i){ if(!draft||!draft.catches[i]) return; syncEntryFields(); const v=prompt('На что поймал? (приманка/наживка)', draft.catches[i].lure||''); if(v!=null){ const t=v.trim(); draft.catches[i].lure=t||null; renderEntry(); } }
 function setRating(r){ draft.rating=r; syncEntryFields(); renderEntry(); }
 function setPrivate(v){ if(draft) draft.private=!!v; }
+function setDate(v){
+  if(!v || !draft) return; syncEntryFields();
+  const ex = Diary.entryByDate(v);
+  if(ex && ex.id!==draft.id){
+    if(confirm('На эту дату уже есть запись — открыть её?')) draft = JSON.parse(JSON.stringify(ex)); else return;
+  } else { draft.date = v; }
+  renderEntry();
+}
 function syncEntryFields(){ const s=$('e_spot'),n=$('e_note'),p=$('e_private'); if(s)draft.spot=s.value; if(n)draft.note=n.value; if(p)draft.private=p.checked; }
 function saveEntry(){
   syncEntryFields();
   draft.visited=true;
-  // приложить снимок погоды, если есть
+  // приложить снимок прогноза ЗА ДЕНЬ РЫБАЛКИ (если он есть в загруженной погоде)
   if(ST.weather && !draft.forecast){
-    try{ const idx=todayIndex(ST.weather); const fc=computeForecast(ST.weather,{filter:'all',todayIdx:idx});
-      draft.forecast={maxT:fc.conditions.maxT,minT:fc.conditions.minT,avgP:fc.conditions.avgP,pdir:fc.conditions.pdir,wt:fc.conditions.wt,score:fc.day.score}; }catch(e){}
+    try{ const times=ST.weather.daily&&ST.weather.daily.time; const idx=times?times.indexOf(draft.date):-1;
+      if(idx>=0){ const fc=computeForecast(ST.weather,{filter:'all',todayIdx:idx});
+        draft.forecast={maxT:fc.conditions.maxT,minT:fc.conditions.minT,avgP:fc.conditions.avgP,pdir:fc.conditions.pdir,wt:fc.conditions.wt,score:fc.day.score}; } }catch(e){}
   }
   const saved = draft;
   Diary.upsertEntry(saved); draft=null; closeModal(); rerender(); Sync.pushSoon();
@@ -925,7 +935,7 @@ export function initUI(){
     openCity, searchCity, pickCity, geo, closeModal, openNotif, shareForecast, onboardDone, openMoon, reportWater, clearNotifs,
     openAccount, signIn: acSignIn, setPass: acSetPass, signOut: acSignOut, syncNow: acSyncNow, saveHandle: acSaveHandle, enablePush: acEnablePush, install: promptInstall,
     like: feedLike, comments: openComments, sendComment, delComment, feedMode:(m)=>{ feedFilter=m; rerender(); }, feedSp:(s)=>{ feedSpecies=(s&&s!==feedSpecies)?s:null; loadFeed(); },
-    newEntry, editEntry, addCatch, rmCatch, setW, setLure, lureCustom, setRating, setPrivate, saveEntry, delEntry, shareCatch, openRecords, exportDiary, importDiary,
+    newEntry, editEntry, addCatch, rmCatch, setW, setLure, lureCustom, setRating, setPrivate, setDate, saveEntry, delEntry, shareCatch, openRecords, exportDiary, importDiary,
     newKit, editKit, kitIcon, kitTarget, addLure, lureQty, rmLure, saveKit, delKit,
     mapView:(v)=>{ ST.mapView=v; MapView.setLayer(v); document.querySelectorAll('.mtoggle button').forEach((b,i)=>b.classList.toggle('on',(i===0)===(v==='satellite'))); },
     mapPick:(la,lo)=>newPlace({lat:la,lon:lo}), newPlace, placeGeo, savePlace, delPlace, mapCatches:(v)=>{ mapShowCatches=!!v; rerender(); },
