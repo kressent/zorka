@@ -76,6 +76,32 @@ export function drawCatches(marks) {
 }
 export function clearCatches() { if (_catchLayer) _catchLayer.clearLayers(); }
 
+// отдельная карта-пикер (для модалки выбора места) — НЕ трогает основную _map
+let _pmap = null;
+export async function initPicker(elId, center, onPick, layer) {
+  const el = document.getElementById(elId); if (!el) return;
+  try {
+    const L = await loadLeaflet();
+    if (!document.getElementById(elId)) return;
+    if (_pmap) { try { _pmap.remove(); } catch (e) {} _pmap = null; }
+    _pmap = L.map(el, { zoomControl: true }).setView([center.lat, center.lon], 11);
+    if (_pmap.attributionControl) _pmap.attributionControl.setPrefix(false);
+    const osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '© OpenStreetMap' });
+    const sat = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxZoom: 19, attribution: '© Esri' });
+    (layer === 'scheme' ? osm : sat).addTo(_pmap);
+    let pin = null;
+    _pmap.on('click', (e) => {
+      if (pin) _pmap.removeLayer(pin);
+      pin = L.circleMarker([e.latlng.lat, e.latlng.lng], { radius: 8, color: '#C58A2E', fillColor: '#C58A2E', fillOpacity: .9, weight: 2 }).addTo(_pmap);
+      if (onPick) onPick(e.latlng.lat, e.latlng.lng);
+    });
+    setTimeout(() => { try { _pmap.invalidateSize(); } catch (e) {} }, 250);
+  } catch (e) {
+    el.innerHTML = '<div class="empty" style="min-height:auto;padding:1rem 0.5rem"><p>Карта не загрузилась (нет сети?). Найди место поиском выше.</p></div>';
+  }
+}
+export function destroyPicker() { if (_pmap) { try { _pmap.remove(); } catch (e) {} _pmap = null; } }
+
 export function setLayer(which) {
   if (!_map || !_base.osm) return;
   if (which === 'satellite') { _map.removeLayer(_base.osm); _base.sat.addTo(_map); }

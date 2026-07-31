@@ -642,7 +642,7 @@ function openModal(html){
   m.addEventListener('click', e=>{ if(e.target===m) closeModal(); });
   document.body.appendChild(m);
 }
-function closeModal(){ const m=$('modal'); if(m) m.remove(); }
+function closeModal(){ const m=$('modal'); if(m) m.remove(); try{ MapView.destroyPicker(); }catch(e){} }
 
 // онбординг первого запуска
 function maybeOnboard(){
@@ -781,7 +781,7 @@ function openCity(){
   searchCity('');
   setTimeout(()=>{ const el=$('citySearch'); if(el) el.focus(); }, 200);
   const center = ST.city ? {lat:ST.city.lat,lon:ST.city.lon} : {lat:54.0,lon:56.0};
-  setTimeout(()=>MapView.initMap('cityMap', center, [], (la,lo)=>Z.cityPick(la,lo), ST.mapView||'satellite'), 80);
+  setTimeout(()=>MapView.initPicker('cityMap', center, (la,lo)=>Z.cityPick(la,lo), ST.mapView||'satellite'), 80);
 }
 let citySearchTimer=null;
 function cityItemsHTML(list){
@@ -796,6 +796,7 @@ function searchCity(q){
   citySearchTimer=setTimeout(async ()=>{
     const inp=$('citySearch'); if(inp && inp.value.trim()!==String(q).trim()) return; // ввод устарел
     const res = await geoSearch(q);
+    const inp2=$('citySearch'); if(inp2 && inp2.value.trim()!==String(q).trim()) return; // устарел, пока ждали ответ
     const b=$('cityResults'); if(!b) return;
     if(res.length) b.innerHTML = cityItemsHTML(res);
     else if(!local.length) b.innerHTML = '<p style="font-size:12.5px;color:var(--slate);padding:8px 2px">Ничего не нашлось. Попробуй иначе или ткни точку на карте ниже.</p>';

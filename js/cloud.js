@@ -76,7 +76,10 @@ export async function signInOrUp(email, password) {
       throw up.error;
     }
     if (up.data.session) return up.data.user; // подтверждение почты выключено → сразу сессия
-    throw new Error('Аккаунт создан. Включено подтверждение почты — открой письмо и нажми ссылку, потом вернись и войди. (Владельцу: лучше выключить «Confirm email» в Supabase.)');
+    // Supabase маскирует существующую почту: user без identities = аккаунт уже есть
+    if (up.data.user && Array.isArray(up.data.user.identities) && up.data.user.identities.length === 0)
+      throw new Error('Аккаунт с этой почтой уже есть — просто неверный пароль. Если забыл, восстанови пароль.');
+    throw new Error('Аккаунт создан. Открой письмо-подтверждение и нажми ссылку, потом вернись и войди.');
   }
   throw inRes.error;
 }

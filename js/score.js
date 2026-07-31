@@ -205,7 +205,8 @@ export function computeForecast(data, opts = {}) {
   }
   const yest  = todayIdx > 0 ? analyzeDay(data, todayIdx - 1) : today;
   const drop  = Math.max(0, yest.maxT - today.maxT);
-  const moon  = moonInfo(new Date());
+  const mDate = (data.daily && data.daily.time && data.daily.time[todayIdx]) ? new Date(data.daily.time[todayIdx] + 'T12:00:00') : new Date();
+  const moon  = moonInfo(mDate);
   const moonAdj = (moon.sc - 3) * 0.15;
   const water = waterModel(data, todayIdx);
   const brk   = weatherBreak(data, todayIdx);
@@ -248,8 +249,10 @@ export function computeForecast(data, opts = {}) {
   for (let i = todayIdx + 1; i < data.daily.time.length && i <= todayIdx + 13; i++) {
     const d = analyzeDay(data, i);
     const prev = analyzeDay(data, i - 1);
+    const dMoon = moonInfo(new Date(data.daily.time[i] + 'T12:00:00'));
     const dctx = { ...ctx, month: d.month, wt: d.wt, cloud: d.cloud > 40, rain: d.rain,
-                   pdir: d.pdir, wind: d.avgWD, drop: Math.max(0, prev.maxT - d.maxT) };
+                   pdir: d.pdir, wind: d.avgWD, drop: Math.max(0, prev.maxT - d.maxT),
+                   moonAdj: (dMoon.sc - 3) * 0.15 };
     const sc = activeSpecies(filter, custom).map(f => scoreFish(f, dctx).sc)
       .filter(x => x > 0).sort((a, b) => b - a).slice(0, 3);
     const dt = new Date(data.daily.time[i]);
