@@ -155,10 +155,10 @@ function renderForecast(){
   const upHTML = fc.upcoming.map(u=>{
     const col = u.score>=4?'#2C6E5A':u.score>=3?'#C58A2E':'#7c8a80';
     const best = u.name===bestName;
-    return `<div class="dayrow"${best?' style="background:rgba(197,138,46,.10)"':''}>
+    return `<div class="dayrow" onclick="Z.openDay('${u.date}')" style="cursor:pointer${best?';background:rgba(197,138,46,.10)':''}">
       <span class="dn">${esc(u.name)}${best?' 🏆':''}</span><span style="font-size:15px">${wIcon(u.wcode)}</span>
       <span class="di">${u.maxT}° / ${u.minT}° · ${u.avgP||''} мм ${pdirTxt(u.pdir).split(' ')[1]||''}</span>
-      <span class="dsc" style="color:${col}">${u.score.toFixed(1)}</span></div>`;
+      <span class="dsc" style="color:${col}">${u.score.toFixed(1)}</span><span class="chev">▸</span></div>`;
   }).join('');
 
   const ban = ST.city ? Regs.activeBan(Regs.zoneOf(ST.city.name)) : null;
@@ -196,7 +196,7 @@ function renderForecast(){
       <div class="adv">${esc(fc.advice)}</div>
       ${waterReportHTML()}
       <div class="lbl" style="margin-top:8px">Прогноз на 2 недели</div>
-      ${(fc.bestDay && fc.bestDay.name!=='Сегодня') ? `<div style="font-family:var(--font-serif);font-size:13.5px;color:var(--jade);margin:8px 0 2px">🏆 Лучший день — <b>${esc(fc.bestDay.name)}</b> · ${fc.bestDay.score.toFixed(1)}/5</div>` : `<div style="font-size:12.5px;color:var(--slate);margin:8px 0 2px">🏆 Лучший день — сегодня</div>`}
+      ${(fc.bestDay && fc.bestDay.name!=='Сегодня') ? `<div onclick="Z.openDay('${fc.bestDay.date||''}')" style="cursor:pointer;font-family:var(--font-serif);font-size:13.5px;color:var(--jade);margin:8px 0 2px">🏆 Лучший день — <b>${esc(fc.bestDay.name)}</b> · ${fc.bestDay.score.toFixed(1)}/5 ▸</div>` : `<div style="font-size:12.5px;color:var(--slate);margin:8px 0 2px">🏆 Лучший день — сегодня</div>`}
       <div class="days">${upHTML}</div>
       <button class="act" style="border-color:var(--brass);color:var(--brass)" onclick="Z.openMoon()">🌙 Лунный календарь на 2 недели</button>
       <button class="act" style="border-color:var(--jade);color:var(--jade)" onclick="Z.shareForecast()">📤 Поделиться прогнозом</button>
@@ -360,6 +360,25 @@ async function loadLureStats(){
   try{ LURE_STATS = indexLureStats(await Cloud.fetchLureRating()); rerender(); }catch(e){}
 }
 function fmtDate(iso){ try{ const d=new Date(iso+'T12:00:00'); return d.getDate()+' '+MONTHS_GEN[d.getMonth()]; }catch(e){ return ''; } }
+function openDay(dateStr){
+  if(!ST.weather || !ST.city || !dateStr){ return; }
+  const times=ST.weather.daily&&ST.weather.daily.time; const idx=times?times.indexOf(dateStr):-1;
+  if(idx<0){ toast('На этот день пока нет данных'); return; }
+  let fc; try{ fc=computeForecast(ST.weather,{filter:ST.filter,custom:ST.custom,todayIdx:idx,lat:ST.city.lat,lon:ST.city.lon}); }catch(e){ return; }
+  const d=new Date(dateStr+'T12:00:00'); const c=fc.conditions;
+  const top=fc.fish.filter(f=>f.sc>0);
+  const fishHTML = top.length
+    ? top.map(f=>`<div class="dayfish"><span class="fd" style="width:9px;height:9px;border-radius:50%;background:${f.col};flex:none"></span><b class="df-n">${f.n}</b>${bars(f.sc)}<span class="df-lr">${esc(f.lr[0]||'')} · ${esc(f.ti||'')}</span></div>`).join('')
+    : `<p style="font-size:13px;color:var(--slate);margin-top:8px">Клёв слабый по большинству видов — день скорее для отдыха у воды.</p>`;
+  const col = fc.day.score>=4?'var(--jade)':fc.day.score>=3?'var(--brass)':'var(--slate)';
+  const win = (fc.bestWindows&&fc.bestWindows.length) ? fc.bestWindows.join(', ') : 'без выраженных окон';
+  openModal(`<h3>${ruDateFull(d)}</h3>
+    <div class="dayhdr"><span class="dayscore" style="color:${col}">${fc.day.score.toFixed(1)}<span> / 5</span></span><span class="daylbl">${fc.day.label}</span></div>
+    <p style="font-size:12.5px;color:var(--slate);margin:2px 0 12px">${c.maxT}° / ${c.minT}° · давление ${c.avgP||'—'} мм ${pdirTxt(c.pdir)} · вода ~${c.wt}° · окна: ${win}</p>
+    <div class="lbl">Что будет клевать</div>
+    <div class="dayfish-list">${fishHTML}</div>
+    <div class="fish-tip">${esc(fc.advice)}</div>`);
+}
 function openMoon(){
   const base=new Date(); base.setHours(12,0,0,0);
   const days=[]; for(let i=0;i<14;i++){ const d=new Date(base); d.setDate(base.getDate()+i); days.push({d, m:moonInfo(d)}); }
@@ -932,7 +951,7 @@ export function initUI(){
     tab, reload:()=>loadWeather(),
     filter:(f)=>{ ST.filter=f; saveSettings(); rerender(); },
     tf:(el)=>el.classList.toggle('open'),
-    openCity, searchCity, pickCity, geo, closeModal, openNotif, shareForecast, onboardDone, openMoon, reportWater, clearNotifs,
+    openCity, searchCity, pickCity, geo, closeModal, openNotif, shareForecast, onboardDone, openMoon, openDay, reportWater, clearNotifs,
     openAccount, signIn: acSignIn, setPass: acSetPass, signOut: acSignOut, syncNow: acSyncNow, saveHandle: acSaveHandle, enablePush: acEnablePush, install: promptInstall,
     like: feedLike, comments: openComments, sendComment, delComment, feedMode:(m)=>{ feedFilter=m; rerender(); }, feedSp:(s)=>{ feedSpecies=(s&&s!==feedSpecies)?s:null; loadFeed(); },
     newEntry, editEntry, addCatch, rmCatch, setW, setLure, lureCustom, setRating, setPrivate, setDate, saveEntry, delEntry, shareCatch, openRecords, exportDiary, importDiary,

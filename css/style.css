@@ -242,6 +242,16 @@ button{font-family:inherit}
 .moon-bar i{display:block;height:100%;background:var(--jade)}
 .moon-row.best .moon-bar i{background:var(--brass)}
 .moon-sc{font-family:var(--font-mono);font-size:11px;color:var(--slate);flex:none;width:28px;text-align:right}
+/* детальный прогноз на день */
+.dayhdr{display:flex;align-items:baseline;gap:10px;margin:2px 0}
+.dayscore{font-family:var(--font-serif);font-size:34px;font-weight:700;line-height:1}
+.dayscore span{font-size:15px;color:var(--slate)}
+.daylbl{font-family:var(--font-serif);font-size:15px;color:var(--jade)}
+.dayfish-list{display:flex;flex-direction:column;gap:2px;margin-top:4px}
+.dayfish{display:flex;align-items:center;gap:9px;padding:8px 0;border-top:1px solid var(--line)}
+.dayfish:first-child{border-top:none}
+.dayfish .df-n{font-family:var(--font-serif);font-size:15px;font-weight:600;min-width:78px}
+.dayfish .df-lr{margin-left:auto;font-size:11px;color:var(--slate);text-align:right;max-width:45%}
 /* отметки воды */
 .wr-line{font-size:12.5px;color:var(--ink);margin:6px 0 8px;line-height:1.5}
 .wr-sub{color:var(--slate);font-size:11px}
