@@ -264,7 +264,15 @@ button{font-family:inherit}
 .nb-row:first-child{border-top:none}
 .nb-row .nb-n{font-family:var(--font-serif);font-size:14.5px;font-weight:600;min-width:74px}
 .nb-row .nb-c{font-family:var(--font-mono);font-size:11px;color:var(--slate)}
-.nb-row .nb-lr{margin-left:auto;font-size:11px;color:var(--jade);font-family:var(--font-mono);text-align:right;max-width:42%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.nb-row .nb-lr{font-size:11px;color:var(--jade);font-family:var(--font-mono);text-align:right;max-width:38%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-left:auto}
+.nb-row .chev{margin-left:8px}
+/* где ловится вид */
+.where-row{padding:9px 0;border-top:1px solid var(--line)}
+.where-row:first-of-type{border-top:none}
+.wr-place{display:flex;align-items:baseline;gap:8px}
+.wr-place b{font-family:var(--font-serif);font-size:15px}
+.wr-km{font-family:var(--font-mono);font-size:11px;color:var(--brass)}
+.wr-meta{font-size:12px;color:var(--slate);margin-top:2px}
 .cl-lure{color:var(--jade);font-size:12px;font-family:var(--font-mono)}
 .tg.real{border-color:var(--brass);color:var(--brass)}
 .tg.real b{color:var(--ink)}

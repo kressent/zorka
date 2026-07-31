@@ -1,6 +1,6 @@
 // Тест «что ловят рядом» (чистая функция).
 import assert from 'node:assert';
-import { nearbyCatches } from '../js/nearby.js';
+import { nearbyCatches, whereSpecies } from '../js/nearby.js';
 
 let pass = 0, fail = 0;
 const check = (name, fn) => { try { fn(); console.log('  ✓ ' + name); pass++; }
@@ -29,6 +29,14 @@ check('без координат / пусто — не падает', () => {
   assert.deepEqual(nearbyCatches(trips, null, null), []);
   assert.deepEqual(nearbyCatches([], 53, 55), []);
   assert.deepEqual(nearbyCatches(null, 53, 55), []);
+});
+
+check('whereSpecies — места с видом, по близости', () => {
+  const r = whereSpecies(trips, 'pike', 53.36, 55.92, 300);
+  assert.equal(r.length, 3);                 // 3 выезда со щукой в радиусе
+  assert.ok(r[0].km <= r[1].km);             // ближайший первый
+  assert.ok(!whereSpecies(trips, 'catfish', 53.36, 55.92, 100).length); // сом далеко
+  assert.equal(whereSpecies(trips, 'trout', 53, 55).length, 0);         // нет такого вида
 });
 
 console.log('\nИтог: ' + pass + ' ✓, ' + fail + ' ✗\n');

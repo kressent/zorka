@@ -21,7 +21,7 @@ import { indexLureStats, topLures } from './lurestats.js';
 import { goodDayAlert } from './forecastAlert.js';
 import { sortByNear } from './geo.js';
 import { summarizeWater, WATER_STATES } from './water.js';
-import { nearbyCatches } from './nearby.js';
+import { nearbyCatches, whereSpecies } from './nearby.js';
 import { personalRecords } from './records.js';
 import { achievements } from './achievements.js';
 import { forecastPost } from './postgen.js';
@@ -364,8 +364,21 @@ function nearbyHTML(){
   const list = nearbyCatches(NEARBY_TRIPS, ST.city.lat, ST.city.lon, 60).slice(0,6);
   if(!list.length) return '';
   const rows = list.map(x=>{ const f=byId(x.species); const nm=f?f.n:esc(x.species); const col=f?f.col:'#7c8a80';
-    return `<div class="nb-row"><span class="dot" style="background:${col}"></span><b class="nb-n">${nm}</b><span class="nb-c">${x.count} ${x.count===1?'улов':(x.count<5?'улова':'уловов')}</span>${x.topLure?`<span class="nb-lr">на ${esc(x.topLure)}</span>`:''}</div>`; }).join('');
-  return `<div class="lbl" style="margin-top:16px">🎣 Здесь реально ловят <span class="lbl-sub">(рыбаки в радиусе 60 км)</span></div><div class="nb-list">${rows}</div>`;
+    return `<div class="nb-row" onclick="Z.where('${x.species}')" style="cursor:pointer"><span class="dot" style="background:${col}"></span><b class="nb-n">${nm}</b><span class="nb-c">${x.count} ${x.count===1?'улов':(x.count<5?'улова':'уловов')}</span>${x.topLure?`<span class="nb-lr">на ${esc(x.topLure)}</span>`:''}<span class="chev">▸</span></div>`; }).join('');
+  return `<div class="lbl" style="margin-top:16px">🎣 Здесь реально ловят <span class="lbl-sub">(тапни вид → где его ловят)</span></div><div class="nb-list">${rows}</div>`;
+}
+
+function openWhere(species){
+  const f=byId(species); const nm=f?f.n:esc(species);
+  const lat=ST.city?ST.city.lat:null, lon=ST.city?ST.city.lon:null;
+  const list = whereSpecies(NEARBY_TRIPS, species, lat, lon, 300).slice(0,15);
+  const rows = list.length ? list.map(x=>{
+    const d=x.caught_at?new Date(x.caught_at):null; const dl=d?`${d.getDate()} ${MONTHS_GEN[d.getMonth()]}`:'';
+    return `<div class="where-row"><div class="wr-place"><b>${x.water_name?esc(x.water_name):'Без названия'}</b>${x.km!=null?`<span class="wr-km">~${x.km} км</span>`:''}</div><div class="wr-meta">${x.weight?fmtW(x.weight)+' · ':''}${x.lure?'на '+esc(x.lure)+' · ':''}${dl}</div></div>`;
+  }).join('') : `<p style="color:var(--slate);font-size:13px;margin-top:8px">Пока никто не отмечал этот вид рядом. Появится, когда рыбаки начнут делиться уловами — это и есть наш маховик. 🎣</p>`;
+  openModal(`<h3>Где ловится: ${nm}</h3>
+    <p style="font-size:12px;color:var(--slate);margin:2px 0 10px">По реальным уловам рыбаков (места огрублённые, до 300 км от тебя).</p>
+    ${rows}`);
 }
 
 // ── рейтинг приманок «что на что реально берёт» (маховик данных) ──
@@ -993,7 +1006,7 @@ export function initUI(){
     tf:(el)=>el.classList.toggle('open'),
     openCity, searchCity, pickCity, cityPick, geo, closeModal, openNotif, shareForecast, onboardDone, openMoon, openDay, reportWater, clearNotifs,
     openAccount, signIn: acSignIn, setPass: acSetPass, signOut: acSignOut, syncNow: acSyncNow, saveHandle: acSaveHandle, enablePush: acEnablePush, install: promptInstall,
-    like: feedLike, comments: openComments, sendComment, delComment, feedMode:(m)=>{ feedFilter=m; rerender(); }, feedSp:(s)=>{ feedSpecies=(s&&s!==feedSpecies)?s:null; loadFeed(); },
+    like: feedLike, comments: openComments, sendComment, delComment, feedMode:(m)=>{ feedFilter=m; rerender(); }, feedSp:(s)=>{ feedSpecies=(s&&s!==feedSpecies)?s:null; loadFeed(); }, where: openWhere,
     newEntry, editEntry, addCatch, rmCatch, setW, setLure, lureCustom, setRating, setPrivate, setDate, saveEntry, delEntry, shareCatch, openRecords, exportDiary, importDiary,
     newKit, editKit, kitIcon, kitTarget, addLure, lureQty, rmLure, saveKit, delKit,
     mapView:(v)=>{ ST.mapView=v; MapView.setLayer(v); document.querySelectorAll('.mtoggle button').forEach((b,i)=>b.classList.toggle('on',(i===0)===(v==='satellite'))); },
