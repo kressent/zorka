@@ -664,7 +664,7 @@ function maybeOnboard(){
     <div class="onb">
       <div class="onb-row"><span class="onb-i">🌅</span><div class="onb-t"><b>Прогноз клёва</b><p>Каждый день — что клюёт, когда и на что. По погоде, давлению, луне и воде.</p></div></div>
       <div class="onb-row"><span class="onb-i">📖</span><div class="onb-t"><b>Дневник</b><p>Записывай уловы — это твоя летопись, и она уточняет прогноз лично для тебя.</p></div></div>
-      <div class="onb-row"><span class="onb-i">🏆</span><div class="onb-t"><b>Сообщество</b><p>Лента уловов + рейтинг приманок «на что реально берёт». Чем нас больше — тем точнее прогноз.</p></div></div>
+      <div class="onb-row"><span class="onb-i">🎣</span><div class="onb-t"><b>Что ловят рядом</b><p>Узнай по реальным уловам рыбаков: какая рыба берёт на твоём водоёме и на что. Чем нас больше — тем полезнее.</p></div></div>
     </div>
     <button class="act" onclick="Z.onboardDone()">Поехали! 🐟</button>`);
 }
