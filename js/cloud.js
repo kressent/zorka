@@ -68,8 +68,11 @@ export async function signInOrUp(email, password) {
       ? (window.location.origin + window.location.pathname) : undefined;
     const up = await c.auth.signUp({ email, password, options: { emailRedirectTo: redirect } });
     if (up.error) {
-      if ((up.error.message || '').toLowerCase().includes('already registered'))
+      const em = (up.error.message || '').toLowerCase();
+      if (em.includes('already registered'))
         throw new Error('Аккаунт с этой почтой уже есть, но пароль неверный.');
+      if (em.includes('sending') || em.includes('smtp') || em.includes('mail') || up.error.status === 500 || !up.error.message)
+        throw new Error('Не удалось отправить письмо-подтверждение — проверь SMTP в Supabase (пароль приложения и порт: попробуй 587 вместо 465). Подробности — Supabase → Authentication → Logs.');
       throw up.error;
     }
     if (up.data.session) return up.data.user; // подтверждение почты выключено → сразу сессия

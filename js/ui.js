@@ -682,6 +682,14 @@ function accountEmailStep(){
     <button class="act" onclick="Z.signIn()">Войти</button>
     <button class="act" style="border-color:var(--brass);color:var(--brass);margin-top:10px" onclick="Z.install()">📲 Установить на телефон</button>`;
 }
+function errMsg(e){
+  if(!e) return 'Неизвестная ошибка';
+  if(typeof e==='string') return e;
+  const m = e.message || e.error_description || e.msg || e.error || e.hint;
+  if(m && String(m).trim() && String(m)!=='{}') return String(m);
+  try{ const s=JSON.stringify(e); if(s && s!=='{}') return s; }catch(_){}
+  return 'Не удалось. Проверь связь и настройки, попробуй ещё раз.';
+}
 async function acSignIn(){
   const em=$('ac_email'), pw=$('ac_pass'); if(!em||!pw) return;
   authEmail=em.value.trim(); const pass=pw.value;
@@ -689,7 +697,7 @@ async function acSignIn(){
   if(!pass || pass.length<6){ alert('Пароль — минимум 6 символов'); return; }
   const s=document.querySelector('#modal .sheet'); const btn=s&&s.querySelector('.act'); if(btn) btn.textContent='Вхожу…';
   try{ await Cloud.signInOrUp(authEmail, pass); closeModal(); toast('Вход выполнен — облако подключено ☁️'); Cloud.ensureProfile().catch(()=>{}); Cloud.subscribeCommunity(onCommunityChange).catch(()=>{}); setTimeout(checkEngagement,1500); rerender(); Sync.syncOnLogin(); }
-  catch(e){ alert(e.message||String(e)); if(btn) btn.textContent='Войти'; }
+  catch(e){ alert(errMsg(e)); if(btn) btn.textContent='Войти'; }
 }
 async function acSetPass(){
   const el=$('ac_setpass'); if(!el) return; const pw=el.value;
