@@ -258,6 +258,13 @@ button{font-family:inherit}
 .wr-btns{display:flex;gap:6px;flex-wrap:wrap}
 .wr-btn{flex:1;min-width:90px;background:var(--card);border:1px solid var(--line);color:var(--ink);font:inherit;font-size:12px;padding:7px 6px;cursor:pointer;clip-path:polygon(6px 0,100% 0,100% 100%,0 100%,0 6px)}
 .wr-btn:active{background:rgba(44,110,90,.10)}
+/* что ловят рядом */
+.nb-list{display:flex;flex-direction:column;gap:2px;margin-top:4px}
+.nb-row{display:flex;align-items:center;gap:9px;padding:7px 0;border-top:1px solid var(--line)}
+.nb-row:first-child{border-top:none}
+.nb-row .nb-n{font-family:var(--font-serif);font-size:14.5px;font-weight:600;min-width:74px}
+.nb-row .nb-c{font-family:var(--font-mono);font-size:11px;color:var(--slate)}
+.nb-row .nb-lr{margin-left:auto;font-size:11px;color:var(--jade);font-family:var(--font-mono);text-align:right;max-width:42%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .cl-lure{color:var(--jade);font-size:12px;font-family:var(--font-mono)}
 .tg.real{border-color:var(--brass);color:var(--brass)}
 .tg.real b{color:var(--ink)}

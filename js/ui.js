@@ -21,6 +21,7 @@ import { indexLureStats, topLures } from './lurestats.js';
 import { goodDayAlert } from './forecastAlert.js';
 import { sortByNear } from './geo.js';
 import { summarizeWater, WATER_STATES } from './water.js';
+import { nearbyCatches } from './nearby.js';
 import { personalRecords } from './records.js';
 import { achievements } from './achievements.js';
 import { forecastPost } from './postgen.js';
@@ -100,6 +101,7 @@ export async function loadWeather(){
       const a=goodDayAlert(fc.upcoming, fc.day.score); if(a){ Notify.addNotif(a); rerender(); }
     }catch(e){}
     if(cloudEnabled() && !WATER_REPORTS.length) setTimeout(loadWaterReports, 300);
+    if(cloudEnabled() && !NEARBY_TRIPS.length) setTimeout(loadNearby, 500);
   }catch(e){
     main.innerHTML = `<div class="center"><div class="ic">📡</div><h2>Нет связи</h2><p>Не удалось загрузить погоду и нет сохранённой копии.</p><button class="act" style="max-width:220px" onclick="Z.reload()">Повторить</button></div>`;
     $('tabbar').innerHTML=navHTML();
@@ -194,6 +196,7 @@ function renderForecast(){
       <div class="lbl" style="margin-top:16px">Клёв сегодня</div>
       ${fishHTML || '<p style="color:var(--slate);font-size:13px;margin-top:10px">Нет выбранных видов.</p>'}
       <div class="adv">${esc(fc.advice)}</div>
+      ${nearbyHTML()}
       ${waterReportHTML()}
       <div class="lbl" style="margin-top:8px">Прогноз на 2 недели</div>
       ${(fc.bestDay && fc.bestDay.name!=='Сегодня') ? `<div onclick="Z.openDay('${fc.bestDay.date||''}')" style="cursor:pointer;font-family:var(--font-serif);font-size:13.5px;color:var(--jade);margin:8px 0 2px">🏆 Лучший день — <b>${esc(fc.bestDay.name)}</b> · ${fc.bestDay.score.toFixed(1)}/5 ▸</div>` : `<div style="font-size:12.5px;color:var(--slate);margin:8px 0 2px">🏆 Лучший день — сегодня</div>`}
@@ -351,6 +354,18 @@ async function reportWater(state){
   if(!ST.city){ toast('Сначала выбери город'); return; }
   try{ await Cloud.reportWater(state, ST.city.lat, ST.city.lon); toast('Спасибо! Отметка учтена 🌊'); loadWaterReports(); }
   catch(e){ toast('Не удалось: '+(e.message||e)); }
+}
+
+// ── «что ловят рядом» (маховик по месту) ──
+let NEARBY_TRIPS = [];
+async function loadNearby(){ if(!cloudEnabled()) return; try{ NEARBY_TRIPS=await Cloud.fetchFeed(80); rerender(); }catch(e){} }
+function nearbyHTML(){
+  if(!cloudEnabled() || !ST.city) return '';
+  const list = nearbyCatches(NEARBY_TRIPS, ST.city.lat, ST.city.lon, 60).slice(0,6);
+  if(!list.length) return '';
+  const rows = list.map(x=>{ const f=byId(x.species); const nm=f?f.n:esc(x.species); const col=f?f.col:'#7c8a80';
+    return `<div class="nb-row"><span class="dot" style="background:${col}"></span><b class="nb-n">${nm}</b><span class="nb-c">${x.count} ${x.count===1?'улов':(x.count<5?'улова':'уловов')}</span>${x.topLure?`<span class="nb-lr">на ${esc(x.topLure)}</span>`:''}</div>`; }).join('');
+  return `<div class="lbl" style="margin-top:16px">🎣 Здесь реально ловят <span class="lbl-sub">(рыбаки в радиусе 60 км)</span></div><div class="nb-list">${rows}</div>`;
 }
 
 // ── рейтинг приманок «что на что реально берёт» (маховик данных) ──
