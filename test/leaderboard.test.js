@@ -1,6 +1,6 @@
 // Тест логики «Улов недели» и трофея (чистые функции, без сети/браузера).
 import assert from 'node:assert';
-import { weekTop, tripMaxWeight, tripHeaviest } from '../js/leaderboard.js';
+import { weekTop, periodTop, tripMaxWeight, tripHeaviest, PERIOD_DAYS } from '../js/leaderboard.js';
 import { isTrophy } from '../js/data.js';
 
 let pass = 0, fail = 0;
@@ -47,6 +47,25 @@ check('weekTop — сортирует: лайки → вес → свежест�
 check('weekTop — пустой ввод не падает', () => {
   assert.deepEqual(weekTop([], NOW), []);
   assert.deepEqual(weekTop(null, NOW), []);
+});
+
+check('periodTop(month) — включает улов 10-дневной давности, C попадает', () => {
+  const top = periodTop(trips, 'month', NOW, 10);
+  assert.ok(top.find(t => t.id === 'C'), 'C (10 дней) входит в месяц');
+  assert.equal(top[0].id, 'C', 'C лидер месяца по лайкам (9)');
+});
+
+check('periodTop(season) — окна расширяются week<month<season', () => {
+  assert.ok(PERIOD_DAYS.week < PERIOD_DAYS.month && PERIOD_DAYS.month < PERIOD_DAYS.season);
+  const older = { id:'E', handle:'Ева', caught_at: iso(60), likes: 2, fish:[{species:'carp',weight:3000}] };
+  const wk = periodTop([older], 'week', NOW, 5);
+  const sn = periodTop([older], 'season', NOW, 5);
+  assert.equal(wk.length, 0, '60 дней — не в неделе');
+  assert.equal(sn.length, 1, '60 дней — в сезоне');
+});
+
+check('weekTop === periodTop(week) (обратная совместимость)', () => {
+  assert.deepEqual(weekTop(trips, NOW, 3).map(t=>t.id), periodTop(trips, 'week', NOW, 3).map(t=>t.id));
 });
 
 check('isTrophy — по порогу вида (граммы)', () => {

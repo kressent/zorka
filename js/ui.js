@@ -15,14 +15,14 @@ import * as Regs from './regulations.js';
 import * as Cloud from './cloud.js';
 import * as Sync from './sync.js';
 import * as MapView from './mapview.js';
-import { weekTop, tripHeaviest } from './leaderboard.js';
+import { periodTop, tripHeaviest, PERIOD_LABEL } from './leaderboard.js';
 import { engagementNotifs } from './engagement.js';
 import { indexLureStats, topLures } from './lurestats.js';
 import { goodDayAlert } from './forecastAlert.js';
 import { sortByNear } from './geo.js';
 import { summarizeWater, WATER_STATES } from './water.js';
 import { nearbyCatches, whereSpecies } from './nearby.js';
-import { clusterWaters } from './waterbodies.js';
+import { clusterWaters, waterProfile } from './waterbodies.js';
 import { personalRecords } from './records.js';
 import { achievements } from './achievements.js';
 import { forecastPost } from './postgen.js';
@@ -396,11 +396,31 @@ function openWaters(){
   const list = clusterWaters(_feedCache||[]);
   const rows = list.slice(0,25).map(w=>{
     const sp = w.species.slice(0,4).map(s=>{ const f=byId(s.species); return (f?f.n:esc(s.species))+' ·'+s.count; }).join(', ');
-    return `<div class="where-row"><div class="wr-place"><b>${esc(w.name)}</b><span class="wr-km">${w.count} ${w.count<5?'улова':'уловов'}</span></div><div class="wr-meta">${sp||'—'}</div></div>`;
+    return `<div class="where-row" onclick="Z.waterProfile('${encodeURIComponent(w.key)}')" style="cursor:pointer"><div class="wr-place"><b>${esc(w.name)}</b><span class="wr-km">${w.count} ${w.count<5?'улова':'уловов'} ▸</span></div><div class="wr-meta">${sp||'—'}</div></div>`;
   }).join('');
   openModal(`<h3>🌊 Водоёмы — по уловам рыбаков</h3>
-    <p style="font-size:12px;color:var(--slate);margin:2px 0 10px">Где что ловится, по реальным уловам сообщества. Чем больше рыбаков — тем полнее список.</p>
+    <p style="font-size:12px;color:var(--slate);margin:2px 0 10px">Где что ловится, по реальным уловам сообщества. Тапни водоём → полный профиль. Чем больше рыбаков — тем полнее список.</p>
     ${rows || '<p style="color:var(--slate);font-size:13px">Пока уловов мало. Список наполнится, когда рыбаки начнут вести дневники 🎣</p>'}`);
+}
+// профиль водоёма: виды + ходовая приманка + крупнейший вес + лучшие месяцы (killer-фича)
+function openWaterProfile(keyEnc){
+  const key=decodeURIComponent(keyEnc);
+  const p=waterProfile(_feedCache||[], key);
+  if(!p){ toast('Нет данных по водоёму'); return; }
+  const months = p.bestMonths.length
+    ? `<div class="wp-months">${p.bestMonths.map(m=>`<span class="wp-mo">${m.label} · ${m.count}</span>`).join('')}</div>`
+    : '';
+  const sp = p.species.map(s=>{ const f=byId(s.species); const nm=f?f.n:esc(s.species); const col=f?f.col:'#7c8a80';
+    const tr=isTrophy(s.species,s.maxW)?' 🏆':'';
+    const meta=[s.topLure?'на '+esc(s.topLure):'', s.maxW?'до '+fmtW(s.maxW):'', s.bestMonth?'пик '+s.bestMonth:''].filter(Boolean).join(' · ');
+    return `<div class="wp-sp" onclick="Z.where('${s.species}')" style="cursor:pointer"><span class="dot" style="background:${col}"></span><b class="wp-n">${nm}${tr}</b><span class="wp-c">${s.count}</span><div class="wp-meta">${meta}</div></div>`;
+  }).join('');
+  openModal(`<h3>🌊 ${esc(p.name)}</h3>
+    <div class="wp-stat">${p.trips} ${p.trips<5?'выезда':'выездов'} · ${p.anglers} ${p.anglers===1?'рыбак':'рыбаков'} · ${p.species.length} видов</div>
+    ${months?`<div class="lbl" style="margin-top:10px">Лучшие месяцы (по уловам)</div>${months}`:''}
+    <div class="lbl" style="margin-top:12px">Что ловится <span class="lbl-sub">(тапни вид → где именно)</span></div>
+    <div class="wp-list">${sp||'—'}</div>
+    <p style="font-size:12px;color:var(--slate);margin-top:12px">По реальным уловам рыбаков. Чем больше дневников — тем точнее профиль. 🎣</p>`);
 }
 function openWhere(species){
   const f=byId(species); const nm=f?f.n:esc(species);
@@ -539,7 +559,7 @@ function realLureHTML(species){
   return `<div class="lbl">🔥 Реально берут на <span class="lbl-sub">(по уловам рыбаков)</span></div><div class="tag-row">${chips}</div>`;
 }
 
-let feedFilter='all', feedSpecies=null;
+let feedFilter='all', feedSpecies=null, leaderPeriod='week';
 function renderFeed(){
   setTimeout(loadFeed, 0);
   const btn=(m,l)=>`<button class="${feedFilter===m?'on':''}" onclick="Z.feedMode('${m}')">${l}</button>`;
@@ -564,8 +584,7 @@ async function loadFeed(){
     if(!items.length){ box.innerHTML=feedEmpty('Пока пусто. Запиши улов в дневнике — и он появится тут (для всех, место огрублённо).'); return; }
     const me = Cloud.cachedUser() ? await Cloud.currentUserId() : null;
     const liked = me ? await Cloud.myLikes(items.map(i=>i.id)) : new Set();
-    const top = weekTop(items, Date.now(), 3);              // «улов недели» — всегда общий
-    const lead = top.length?leaderboardHTML(top):'';
+    const lead = leaderBoxHTML(items);                      // 🏆 лидерборд — всегда общий (неделя/месяц/сезон)
     const spAll = [...new Set(items.flatMap(t=>(t.fish||[]).map(f=>f&&f.species).filter(Boolean)))];
     const spChips = spAll.length>1 ? `<div class="feed-sp">${spAll.map(s=>{const b=byId(s);return `<button class="${feedSpecies===s?'on':''}" onclick="Z.feedSp('${s}')">${b?esc(b.n):esc(s)}</button>`;}).join('')}${feedSpecies?'<button class="clr" onclick="Z.feedSp(\'\')">✕</button>':''}</div>` : '';
     let list = items;
@@ -609,7 +628,15 @@ function feedCard(it, mine, myId){
     <div class="fc-actions">${like}${cm}</div>
   </div>`;
 }
-// 🏆 Улов недели — топ выездов за 7 дней (лайки → крупная рыба → свежесть)
+// 🏆 Лидерборд с переключателем периода (неделя/месяц/сезон)
+const PERIOD_BTN = { week:'Неделя', month:'Месяц', season:'Сезон' };
+function leaderBoxHTML(items){
+  const top = periodTop(items, leaderPeriod, Date.now(), 3);
+  const toggle = `<div class="lb-per">${['week','month','season'].map(p=>`<button class="${leaderPeriod===p?'on':''}" onclick="Z.leaderPeriod('${p}')">${PERIOD_BTN[p]}</button>`).join('')}</div>`;
+  const body = top.length ? leaderboardHTML(top) : `<div class="lb-empty">За ${esc(PERIOD_LABEL[leaderPeriod])} уловов пока нет — будь первым 🎣</div>`;
+  return `<div id="leadBox">${toggle}${body}</div>`;
+}
+// топ выездов за период (лайки → крупная рыба → свежесть)
 function leaderboardHTML(top){
   const win=top[0]; const wh=tripHeaviest(win);
   const wfn=wh?(byId(wh.species)?byId(wh.species).n:esc(wh.species)):'Улов';
@@ -618,7 +645,7 @@ function leaderboardHTML(top){
   const rows=top.slice(1).map((t,i)=>{ const h=tripHeaviest(t); const nm=h?(byId(h.species)?byId(h.species).n:esc(h.species)):'—'; const w=h?fmtW(h.weight):'';
     return `<div class="lb-row"><span class="lb-pos">${i+2}</span><span class="lb-who">${esc(t.handle||'Рыбак')}</span><span class="lb-fish">${nm}${w?' · '+w:''}</span><span class="lb-likes">❤ ${t.likes||0}</span></div>`; }).join('');
   return `<div class="lb">
-    <div class="lb-head">🏆 Улов недели</div>
+    <div class="lb-head">🏆 Улов ${esc(PERIOD_LABEL[leaderPeriod])}</div>
     <div class="lb-win">
       <div class="lb-win-name">${esc(win.handle||'Рыбак')}</div>
       <div class="lb-win-fish">${wfn}${wfw?` · <b>${wfw}</b>`:''}${wtr}</div>
@@ -1128,6 +1155,8 @@ export function initUI(){
     openCity, searchCity, pickCity, cityPick, geo, closeModal, openNotif, shareForecast, onboardDone, openMoon, openDay, openConfidence, reportWater, clearNotifs, openWaters,
     openAccount, signIn: acSignIn, setPass: acSetPass, signOut: acSignOut, syncNow: acSyncNow, saveHandle: acSaveHandle, enablePush: acEnablePush, pushAllow, pushLater, install: promptInstall,
     like: feedLike, comments: openComments, sendComment, delComment, feedMode:(m)=>{ feedFilter=m; rerender(); }, feedSp:(s)=>{ feedSpecies=(s&&s!==feedSpecies)?s:null; loadFeed(); }, where: openWhere,
+    leaderPeriod:(p)=>{ leaderPeriod=p; const box=$('leadBox'); if(box && _feedCache) box.outerHTML=leaderBoxHTML(_feedCache); },
+    waterProfile: openWaterProfile,
     newEntry, editEntry, addCatch, rmCatch, setW, setLure, lureCustom, setRating, setPrivate, setDate, pickEntryLoc, entryBack, clearEntryLoc, entryLocSearch, entryLocGo, saveEntry, delEntry, shareCatch, openRecords, exportDiary, importDiary,
     newKit, editKit, kitIcon, kitTarget, addLure, lureQty, rmLure, saveKit, delKit,
     mapView:(v)=>{ ST.mapView=v; MapView.setLayer(v); document.querySelectorAll('.mtoggle button').forEach((b,i)=>b.classList.toggle('on',(i===0)===(v==='satellite'))); },

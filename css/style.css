@@ -284,6 +284,16 @@ button{font-family:inherit}
 .tg.real{border-color:var(--brass);color:var(--brass)}
 .tg.real b{color:var(--ink)}
 .lbl-sub{text-transform:none;font-weight:400;color:var(--slate);font-family:var(--font-serif);font-style:italic}
+/* профиль водоёма */
+.wp-stat{font-family:var(--font-mono);font-size:11.5px;color:var(--slate);margin-top:4px}
+.wp-months{display:flex;flex-wrap:wrap;gap:6px;margin-top:7px}
+.wp-mo{font-family:var(--font-mono);font-size:11px;padding:3px 9px;border:1px solid var(--brass);color:var(--brass)}
+.wp-list{margin-top:6px}
+.wp-sp{display:grid;grid-template-columns:auto 1fr auto;align-items:center;column-gap:9px;padding:8px 0;border-top:1px solid var(--line)}
+.wp-sp:first-child{border-top:none}
+.wp-sp .wp-n{font-family:var(--font-serif);font-size:15px;font-weight:600}
+.wp-sp .wp-c{font-family:var(--font-mono);font-size:12px;color:var(--slate)}
+.wp-sp .wp-meta{grid-column:2/4;font-size:12px;color:var(--jade);font-family:var(--font-mono);margin-top:2px}
 
 /* загрузка / ошибка / нет города */
 .center{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:70dvh;text-align:center;padding:2rem;gap:.6rem}
@@ -376,6 +386,10 @@ button{font-family:inherit}
 /* 🏆 Улов недели */
 .lb{border:1.5px solid var(--brass);background:linear-gradient(180deg,rgba(197,138,46,.10),transparent 70%);padding:12px 14px 14px;margin-bottom:12px;clip-path:polygon(12px 0,100% 0,100% 100%,0 100%,0 12px)}
 .lb-head{font-family:var(--font-mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--brass);font-weight:700;margin-bottom:8px}
+.lb-per{display:flex;gap:6px;margin-bottom:10px}
+.lb-per button{flex:1;font-family:var(--font-mono);font-size:11px;letter-spacing:.03em;padding:5px 0;border:1px solid var(--line);background:transparent;color:var(--slate);cursor:pointer}
+.lb-per button.on{border-color:var(--brass);color:var(--brass);font-weight:700}
+.lb-empty{font-size:12.5px;color:var(--slate);border:1px dashed var(--line);padding:12px;text-align:center}
 .lb-win-name{font-family:var(--font-serif);font-size:17px;font-weight:700}
 .lb-win-fish{font-family:var(--font-serif);font-size:15px;margin-top:2px}
 .lb-win-fish b{color:var(--brass)}
