@@ -47,7 +47,7 @@ function dayFactorsHTML(fc){
   const c=fc.conditions, f=[];
   if(c.pdir==='down') f.push(['давление падает ✓','good']);
   else if(c.pdir==='up') f.push(['давление растёт','bad']);
-  if(fc.weatherBreak>0) f.push(['слом погоды — жор ✓','good']);
+  if(fc.weatherBreak && fc.weatherBreak.boost>0) f.push([(fc.weatherBreak.note||'слом погоды — жор')+' ✓','good']);
   if(fc.moon){ if(fc.moon.sc>=4) f.push(['луна помогает ✓','good']); else if(fc.moon.sc<=2) f.push(['луна против','bad']); }
   if(c.wind>=7) f.push([`ветер ${c.wind} м/с`,'bad']);
   else if(c.avgWD!=null && (c.avgWD<=70||c.avgWD>=340) && c.wind>=3) f.push(['северный ветер','bad']);
@@ -201,7 +201,8 @@ function renderForecast(){
         <div class="sub">${wDesc(c.wcode)} · днём ${c.maxT}°, ночью ${c.minT}° · ${wdName(c.avgWD)} ${c.wind} м/с</div>
         <div class="sub">🌊 вода ~${c.wt}° · ${fc.water.label} · давление ${c.avgP} мм ${pdirTxt(c.pdir)}</div>
         <div class="mood">${comfortMood(c)}</div>
-        ${dayFactorsHTML(fc)}</div>
+        ${dayFactorsHTML(fc)}
+        ${fc.confidence?`<button class="confbadge c-${fc.confidence.level}" onclick="Z.openConfidence()">◐ Уверенность прогноза: ${fc.confidence.label}${fc.confidence.why.length?' ⓘ':''}</button>`:''}</div>
     </div>
     <svg class="wave" viewBox="0 0 340 22" preserveAspectRatio="none"><path d="M0,12 C60,3 110,20 170,12 C230,4 280,20 340,10 L340,0 L0,0 Z" fill="#EFE9DB"/></svg>
     <div class="body">
@@ -452,6 +453,18 @@ function openMoon(){
   openModal(`<h3>🌙 Лунный календарь · 2 недели</h3>
     <p style="font-size:12.5px;color:var(--slate);margin:2px 0 10px">Луна влияет на активность рыбы. Чем ярче полоса — тем лучше по луне. Учитывается и в основном прогнозе.</p>
     ${rows}`);
+}
+function openConfidence(){
+  if(!ST.weather) return;
+  let fc; try{ const idx=todayIndex(ST.weather); fc=computeForecast(ST.weather,{filter:ST.filter,custom:ST.custom,todayIdx:idx,lat:ST.city.lat,lon:ST.city.lon}); }catch(e){ return; }
+  const cf=fc.confidence; if(!cf) return;
+  const why = cf.why.length
+    ? `<div class="lbl" style="margin-top:10px">Что снижает уверенность</div>`+cf.why.map(w=>`<div class="conf-why">• ${esc(w)}</div>`).join('')
+    : `<p style="font-size:13px;color:var(--jade);margin-top:8px">✓ Данные полные, погода стабильная — прогноз надёжный.</p>`;
+  openModal(`<h3>◐ Уверенность прогноза: <span class="c-${cf.level}" style="padding:2px 8px;border-radius:0">${esc(cf.label)}</span></h3>
+    <p style="font-size:12.5px;color:var(--slate);margin:2px 0 4px">Прогноз строится на правилах по погоде, давлению, луне и воде. Уверенность показывает, насколько солидны данные и стабильна ли погода именно сегодня.</p>
+    ${why}
+    <p style="font-size:12px;color:var(--slate);margin-top:12px">Чем дольше рыбаки ведут дневники, тем точнее прогноз — модель будет учиться на реальных уловах.</p>`);
 }
 async function shareForecast(){
   if(!(ST.weather && ST.city)) return;
@@ -1112,7 +1125,7 @@ export function initUI(){
     tab, reload:()=>loadWeather(),
     filter:(f)=>{ ST.filter=f; saveSettings(); rerender(); },
     tf:(el)=>el.classList.toggle('open'),
-    openCity, searchCity, pickCity, cityPick, geo, closeModal, openNotif, shareForecast, onboardDone, openMoon, openDay, reportWater, clearNotifs, openWaters,
+    openCity, searchCity, pickCity, cityPick, geo, closeModal, openNotif, shareForecast, onboardDone, openMoon, openDay, openConfidence, reportWater, clearNotifs, openWaters,
     openAccount, signIn: acSignIn, setPass: acSetPass, signOut: acSignOut, syncNow: acSyncNow, saveHandle: acSaveHandle, enablePush: acEnablePush, pushAllow, pushLater, install: promptInstall,
     like: feedLike, comments: openComments, sendComment, delComment, feedMode:(m)=>{ feedFilter=m; rerender(); }, feedSp:(s)=>{ feedSpecies=(s&&s!==feedSpecies)?s:null; loadFeed(); }, where: openWhere,
     newEntry, editEntry, addCatch, rmCatch, setW, setLure, lureCustom, setRating, setPrivate, setDate, pickEntryLoc, entryBack, clearEntryLoc, entryLocSearch, entryLocGo, saveEntry, delEntry, shareCatch, openRecords, exportDiary, importDiary,

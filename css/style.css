@@ -102,6 +102,12 @@ button{font-family:inherit}
 .ftag{font-family:var(--font-mono);font-size:10px;padding:2px 7px;border:1px solid var(--line);color:var(--slate)}
 .ftag.good{color:var(--jade);border-color:var(--jade)}
 .ftag.bad{color:var(--bad);border-color:var(--bad)}
+.confbadge{display:inline-block;margin-top:9px;font-family:var(--font-mono);font-size:10.5px;letter-spacing:.02em;padding:3px 9px;border:1px solid var(--line);background:transparent;color:var(--slate);cursor:pointer}
+.confbadge.c-high{color:var(--jade);border-color:var(--jade)}
+.confbadge.c-medium{color:var(--brass);border-color:var(--brass)}
+.confbadge.c-low{color:var(--bad);border-color:var(--bad)}
+.c-high{color:var(--jade)} .c-medium{color:var(--brass)} .c-low{color:var(--bad)}
+.conf-why{font-size:12.5px;color:var(--ink);margin:5px 0;line-height:1.4}
 .detail-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin:8px 0}
 .dg .k{font-family:var(--font-mono);font-size:9px;letter-spacing:.08em;text-transform:uppercase;color:var(--slate)}
 .dg .v{font-size:12.5px}

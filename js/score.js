@@ -172,6 +172,21 @@ function hourProfile(fish, h, srH, ssH) {
   return clamp(base + 0.85 * Math.max(dawn, dusk), 0, 1);
 }
 
+// уверенность прогноза — честно: полнота данных + стабильность погоды.
+// Возвращает { level:'high'|'medium'|'low', label, why:[...] } — почему не выше.
+export function forecastConfidence(water, today, drop) {
+  let s = 3; const why = [];
+  if (water && water.source === 'history') s += 1;
+  else { s -= 1; why.push('пока мало истории по воде — уточнится со временем'); }
+  if (drop >= 6) { s -= 1; why.push('резкая смена температуры — погода нестабильна'); }
+  else if (drop >= 3) { s -= 0.4; why.push('заметное похолодание'); }
+  if (today && today.rain) { s -= 0.5; why.push('осадки — прогноз по вероятности, погода капризна'); }
+  if (today && today.pdir === 'stable') s += 0.5;
+  const level = s >= 3.6 ? 'high' : s >= 2.2 ? 'medium' : 'low';
+  const label = level === 'high' ? 'высокая' : level === 'medium' ? 'средняя' : 'ниже обычной';
+  return { level, label, why };
+}
+
 function dayLabel(score) {
   if (score >= 4.3) return 'Отличный день';
   if (score >= 3.4) return 'Хороший день';
@@ -275,6 +290,7 @@ export function computeForecast(data, opts = {}) {
 
   return {
     day: { score: dayScore, label: dayLabel(dayScore) },
+    confidence: forecastConfidence(water, today, drop),
     conditions: today, moon, sun: { srH, ssH },
     water, weatherBreak: brk,
     fish, hourly, upcoming, bestDay, advice,

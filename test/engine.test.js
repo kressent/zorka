@@ -88,6 +88,12 @@ check('вода: уровень 0..3 + метка + тренд', () => {
   assert.ok(typeof fc.water.label==='string' && fc.water.label.length>3);
   assert.ok(['rise','hold','fall'].includes(fc.water.trend));
 });
+check('уверенность: валидный уровень + метка + why[]', () => {
+  const cf = fc.confidence;
+  assert.ok(cf && ['high','medium','low'].includes(cf.level), 'level='+(cf&&cf.level));
+  assert.ok(typeof cf.label==='string' && cf.label.length>2);
+  assert.ok(Array.isArray(cf.why));
+});
 check('нерест: майский лещ (спавн) даёт 0', () => {
   const bream = SPECIES.find(f=>f.id==='bream');
   const r = scoreFish(bream, { month:5, wt:18, cloud:false, rain:false, pdir:'stable', wind:210, drop:0, moonAdj:0, turbidity:0, breakBoost:0 });
