@@ -37,6 +37,11 @@ export function lowStock(kit) {
 }
 
 // рекомендация комплекта под топ-рыбу дня
+// комплект, заточенный под конкретный вид (по target) — для детали рыбы
+export function kitForSpecies(id) {
+  return getKits().find(k => (k.target || []).includes(id)) || null;
+}
+
 export function recommendKit(topFish) {
   const kits = getKits();
   if (!kits.length || !topFish || !topFish.length) return null;

@@ -165,6 +165,7 @@ function renderForecast(){
         <div class="lbl">📍 Места</div><div class="tag-row">${f.sp2.map(s=>`<span class="tg">${esc(s)}</span>`).join('')}</div>
         <div class="lbl">🎣 Приманки</div><div class="tag-row">${f.lr.map(l=>`<span class="tg lure">${esc(l)}</span>`).join('')}</div>
         ${realLureHTML(f.id)}
+        ${kitHintHTML(f.id)}
         <div class="fish-tip">${esc(f.tp)}</div></div>`;
   }).join('');
 
@@ -516,6 +517,7 @@ function importDiary(){
   };
   inp.click();
 }
+function kitHintHTML(id){ const k=Tackle.kitForSpecies(id); return k?`<div class="lbl">🎒 Твой комплект</div><div class="tag-row"><span class="tg" style="border-color:var(--jade);color:var(--jade)">${esc(k.icon||'🎣')} ${esc(k.name)}</span></div>`:''; }
 function realLureHTML(species){
   const top = topLures(LURE_STATS, species, 3);
   if(!top.length) return '';
