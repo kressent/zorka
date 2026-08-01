@@ -890,11 +890,12 @@ function pickEntryLoc(){
     <p style="font-size:12.5px;color:var(--slate);margin:2px 0 8px">Найди село/реку в поиске и/или тапни точку (заводь, перекат, яма). Потом «Готово».</p>
     <div class="field"><input id="entrySearch" placeholder="Село, река, ориентир…" oninput="Z.entryLocSearch(this.value)" autocomplete="off"></div>
     <div id="entrySearchRes" style="margin-bottom:8px"></div>
+    <div class="mtoggle pk-toggle" style="margin-bottom:6px"><button onclick="Z.pickerLayer('satellite')">Спутник</button><button class="on" onclick="Z.pickerLayer('scheme')">Схема (реки)</button></div>
     <div id="entryMap" style="height:300px;border:1px solid var(--rule);background:#dfe6e0;z-index:0"></div>
     <p id="entryLocLbl" style="font-size:12px;color:var(--slate);margin-top:8px">${draft.lat!=null?`Точка: ${draft.lat.toFixed(4)}, ${draft.lon.toFixed(4)}`:'Точка не выбрана'}</p>
     <button class="act" onclick="Z.entryBack()">← Готово, назад к записи</button>
     ${draft.lat!=null?`<button class="act" style="border-color:var(--bad);color:var(--bad);margin-top:8px" onclick="Z.clearEntryLoc()">Убрать точку</button>`:''}`);
-  setTimeout(()=>MapView.initPicker('entryMap', center, (la,lo)=>{ draft.lat=la; draft.lon=lo; const el=$('entryLocLbl'); if(el) el.textContent='Точка: '+la.toFixed(4)+', '+lo.toFixed(4); }, ST.mapView||'satellite'), 80);
+  setTimeout(()=>MapView.initPicker('entryMap', center, (la,lo)=>{ draft.lat=la; draft.lon=lo; const el=$('entryLocLbl'); if(el) el.textContent='Точка: '+la.toFixed(4)+', '+lo.toFixed(4); }, 'scheme'), 80);
 }
 function entryBack(){ renderEntry(); }
 function clearEntryLoc(){ if(draft){ draft.lat=null; draft.lon=null; } renderEntry(); }
@@ -1049,5 +1050,6 @@ export function initUI(){
     newKit, editKit, kitIcon, kitTarget, addLure, lureQty, rmLure, saveKit, delKit,
     mapView:(v)=>{ ST.mapView=v; MapView.setLayer(v); document.querySelectorAll('.mtoggle button').forEach((b,i)=>b.classList.toggle('on',(i===0)===(v==='satellite'))); },
     mapPick:(la,lo)=>newPlace({lat:la,lon:lo}), newPlace, placeGeo, savePlace, delPlace, mapCatches:(v)=>{ mapShowCatches=!!v; rerender(); },
+    pickerLayer:(w)=>{ MapView.setPickerLayer(w); document.querySelectorAll('.pk-toggle button').forEach((b,i)=>b.classList.toggle('on',(i===0)===(w==='satellite'))); },
   };
 }

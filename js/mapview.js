@@ -88,7 +88,14 @@ export function drawCatches(marks) {
 export function clearCatches() { if (_catchLayer) _catchLayer.clearLayers(); }
 
 // отдельная карта-пикер (для модалки выбора места) — НЕ трогает основную _map
-let _pmap = null;
+let _pmap = null, _pbase = {};
+function pApplyBase(which) {
+  if (!_pmap) return;
+  [_pbase.osm, _pbase.sat, _pbase.labels].forEach(l => { if (l && _pmap.hasLayer(l)) _pmap.removeLayer(l); });
+  if (which === 'scheme') { _pbase.osm.addTo(_pmap); }
+  else { _pbase.sat.addTo(_pmap); if (_pbase.labels) _pbase.labels.addTo(_pmap); }
+}
+export function setPickerLayer(which) { pApplyBase(which === 'scheme' ? 'scheme' : 'sat'); }
 export async function initPicker(elId, center, onPick, layer) {
   const el = document.getElementById(elId); if (!el) return;
   try {
@@ -97,10 +104,10 @@ export async function initPicker(elId, center, onPick, layer) {
     if (_pmap) { try { _pmap.remove(); } catch (e) {} _pmap = null; }
     _pmap = L.map(el, { zoomControl: true }).setView([center.lat, center.lon], 11);
     if (_pmap.attributionControl) _pmap.attributionControl.setPrefix(false);
-    const osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '© OpenStreetMap' });
-    const sat = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxZoom: 19, attribution: '© Esri' });
-    const labels = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}', { maxZoom: 19 });
-    if (layer === 'scheme') { osm.addTo(_pmap); } else { sat.addTo(_pmap); labels.addTo(_pmap); }
+    _pbase.osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '© OpenStreetMap' });
+    _pbase.sat = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxZoom: 19, attribution: '© Esri' });
+    _pbase.labels = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}', { maxZoom: 19 });
+    pApplyBase(layer);
     let pin = null;
     _ppin = (la, lo) => { if (pin) _pmap.removeLayer(pin); pin = L.circleMarker([la, lo], { radius: 8, color: '#C58A2E', fillColor: '#C58A2E', fillOpacity: .9, weight: 2 }).addTo(_pmap); };
     _pmap.on('click', (e) => { _ppin(e.latlng.lat, e.latlng.lng); if (onPick) onPick(e.latlng.lat, e.latlng.lng); });
