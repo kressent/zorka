@@ -211,6 +211,30 @@ export async function toggleLike(tripKey, on) {
   }
 }
 
+// ── жалобы на выезды (антиспам). Устойчивы к «миграция 018 ещё не прогнана» ──
+export async function reportTrip(tripKey, reason) {
+  const c = await client(); const u = await currentUser(); if (!c || !u) throw new Error('Войди в аккаунт');
+  const { error } = await c.from('trip_reports').insert({ trip_key: tripKey, user_id: u.id, reason: reason || null });
+  if (error && !String(error.message || '').toLowerCase().includes('duplicate')) throw error;
+}
+// какие выезды я уже отметил жалобой (для скрытия у себя)
+export async function myReports(ids) {
+  try {
+    const c = await client(); const u = await currentUser();
+    if (!c || !u || !ids.length) return new Set();
+    const { data } = await c.from('trip_reports').select('trip_key').eq('user_id', u.id).in('trip_key', ids);
+    return new Set((data || []).map(r => r.trip_key));
+  } catch (e) { return new Set(); }
+}
+// счётчики жалоб по выездам (для авто-скрытия при пороге); молча пусто, если вью нет
+export async function reportCounts(ids) {
+  try {
+    const c = await client(); if (!c || !ids.length) return {};
+    const { data } = await c.from('report_counts').select('*').in('trip_key', ids);
+    const m = {}; for (const r of (data || [])) m[r.trip_key] = r.n; return m;
+  } catch (e) { return {}; }
+}
+
 // ── профиль рыбака: ник + рейтинг (очки/ранг считает вью angler_stats) ──
 function genHandle() {
   // нейтральный ник по умолчанию (без утечки почты); рыбак сам переименует

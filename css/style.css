@@ -383,6 +383,9 @@ button{font-family:inherit}
 .feed-card .fc-actions .like-btn{margin-top:0}
 .cm-btn{background:none;border:1px solid var(--line);color:var(--slate);font:inherit;font-size:12.5px;padding:5px 12px;border-radius:99px;cursor:pointer;display:inline-flex;align-items:center;gap:5px}
 .cm-btn .cc{font-family:var(--font-mono);font-weight:700}
+.fc-spacer{flex:1}
+.rep-btn{background:none;border:1px solid var(--line);color:var(--slate);font:inherit;font-size:12.5px;padding:5px 10px;border-radius:99px;cursor:pointer;opacity:.6}
+.rep-btn:hover{opacity:1;border-color:var(--bad);color:var(--bad)}
 /* 🏆 Улов недели */
 .lb{border:1.5px solid var(--brass);background:linear-gradient(180deg,rgba(197,138,46,.10),transparent 70%);padding:12px 14px 14px;margin-bottom:12px;clip-path:polygon(12px 0,100% 0,100% 100%,0 100%,0 12px)}
 .lb-head{font-family:var(--font-mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--brass);font-weight:700;margin-bottom:8px}

@@ -614,10 +614,19 @@ async function loadFeed(){
   const box=$('feedBody'); if(!box) return;
   if(!cloudEnabled()){ box.innerHTML=feedEmpty('Облако не настроено.'); return; }
   try{
-    const items=await getFeed(true);
+    let items=await getFeed(true);
     if(!items.length){ box.innerHTML=feedEmpty('Пока пусто. Запиши улов в дневнике — и он появится тут (для всех, место огрублённо).'); return; }
     const me = Cloud.cachedUser() ? await Cloud.currentUserId() : null;
-    const liked = me ? await Cloud.myLikes(items.map(i=>i.id)) : new Set();
+    const ids = items.map(i=>i.id);
+    const [liked, myRep, repCounts] = await Promise.all([
+      me ? Cloud.myLikes(ids) : Promise.resolve(new Set()),
+      Cloud.myReports(ids),
+      Cloud.reportCounts(ids),
+    ]);
+    // антиспам: прячем то, на что я пожаловался, и то, на что ≥3 жалоб (кроме своих)
+    const REPORT_HIDE=3;
+    items = items.filter(it => !myRep.has(it.id) && ((repCounts[it.id]||0) < REPORT_HIDE || it.user_id===me));
+    if(!items.length){ box.innerHTML=feedEmpty('Пока пусто. Запиши улов в дневнике — и он появится тут (для всех, место огрублённо).'); return; }
     const lead = leaderBoxHTML(items);                      // 🏆 лидерборд — всегда общий (неделя/месяц/сезон)
     const spAll = [...new Set(items.flatMap(t=>(t.fish||[]).map(f=>f&&f.species).filter(Boolean)))];
     const spChips = spAll.length>1 ? `<div class="feed-sp">${spAll.map(s=>{const b=byId(s);return `<button class="${feedSpecies===s?'on':''}" onclick="Z.feedSp('${s}')">${b?esc(b.n):esc(s)}</button>`;}).join('')}${feedSpecies?'<button class="clr" onclick="Z.feedSp(\'\')">✕</button>':''}</div>` : '';
@@ -654,12 +663,13 @@ function feedCard(it, mine, myId){
     ? `<div class="tc-own">❤ <span class="lc">${it.likes||0}</span> · твой улов</div>`
     : `<button class="like-btn${mine?' on':''}" onclick="Z.like('${it.id}',this)">❤ <span class="lc">${it.likes||0}</span></button>`;
   const cm = `<button class="cm-btn" onclick="Z.comments('${it.id}')">💬 <span class="cc">${it.comments||0}</span></button>`;
+  const rep = isMine ? '' : `<button class="rep-btn" onclick="Z.report('${it.id}')" title="Пожаловаться на фейк/спам">🚩</button>`;
   return `<div class="feed-card">
     ${who}
     ${head}
     <div class="tc-list">${rows||'<div class="tc-fish"><span class="tc-fn" style="color:var(--slate)">Был на рыбалке</span></div>'}</div>
     ${sc?`<div class="fc-badges">${sc}</div>`:''}
-    <div class="fc-actions">${like}${cm}</div>
+    <div class="fc-actions">${like}${cm}${rep?`<span class="fc-spacer"></span>${rep}`:''}</div>
   </div>`;
 }
 // 🏆 Лидерборд с переключателем периода (неделя/месяц/сезон)
@@ -694,6 +704,18 @@ async function feedLike(id, btn){
   btn.classList.toggle('on',on); lc.textContent=on?cur+1:Math.max(0,cur-1);
   try{ await Cloud.toggleLike(id,on); }
   catch(e){ btn.classList.toggle('on',!on); lc.textContent=cur; toast('Не удалось: '+(e.message||e)); }
+}
+
+// пожаловаться на выезд (фейк/спам). После жалобы прячем карточку у себя.
+async function reportTrip(id){
+  if(!Cloud.cachedUser()){ toast('Войди в аккаунт, чтобы пожаловаться'); openAccount(); return; }
+  if(!confirm('Пожаловаться на этот улов как на фейк или спам?\nЕсли пожалуются несколько рыбаков — он скроется у всех.')) return;
+  try{
+    await Cloud.reportTrip(id, 'fake');
+    const card=document.querySelector(`.rep-btn[onclick*="${id}"]`);
+    const wrap=card?card.closest('.feed-card'):null; if(wrap){ wrap.style.opacity=.4; wrap.style.pointerEvents='none'; }
+    toast('Спасибо, жалоба отправлена 🚩');
+  }catch(e){ toast('Не удалось: '+(e.message||e)); }
 }
 
 // ── комментарии к выезду ──
@@ -1188,7 +1210,7 @@ export function initUI(){
     tf:(el)=>el.classList.toggle('open'),
     openCity, searchCity, pickCity, cityPick, geo, closeModal, openNotif, shareForecast, onboardDone, openMoon, openDay, openConfidence, reportWater, clearNotifs, openWaters,
     openAccount, signIn: acSignIn, setPass: acSetPass, signOut: acSignOut, syncNow: acSyncNow, saveHandle: acSaveHandle, enablePush: acEnablePush, pushAllow, pushLater, install: promptInstall,
-    like: feedLike, comments: openComments, sendComment, delComment, feedMode:(m)=>{ feedFilter=m; rerender(); }, feedSp:(s)=>{ feedSpecies=(s&&s!==feedSpecies)?s:null; loadFeed(); }, where: openWhere,
+    like: feedLike, comments: openComments, sendComment, delComment, report: reportTrip, feedMode:(m)=>{ feedFilter=m; rerender(); }, feedSp:(s)=>{ feedSpecies=(s&&s!==feedSpecies)?s:null; loadFeed(); }, where: openWhere,
     leaderPeriod:(p)=>{ leaderPeriod=p; const box=$('leadBox'); if(box && _feedCache) box.outerHTML=leaderBoxHTML(_feedCache); },
     waterProfile: openWaterProfile,
     newEntry, editEntry, addCatch, rmCatch, setW, setLure, lureCustom, setRating, setPrivate, setDate, pickEntryLoc, entryBack, clearEntryLoc, entryLocSearch, entryLocGo, saveEntry, delEntry, shareCatch, openRecords, openYear, shareYear, exportDiary, importDiary,
