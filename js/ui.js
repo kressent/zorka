@@ -435,7 +435,8 @@ function openDay(dateStr){
   const win = (fc.bestWindows&&fc.bestWindows.length) ? fc.bestWindows.join(', ') : 'без выраженных окон';
   openModal(`<h3>${ruDateFull(d)}</h3>
     <div class="dayhdr"><span class="dayscore" style="color:${col}">${fc.day.score.toFixed(1)}<span> / 5</span></span><span class="daylbl">${fc.day.label}</span></div>
-    <p style="font-size:12.5px;color:var(--slate);margin:2px 0 12px">${c.maxT}° / ${c.minT}° · давление ${c.avgP||'—'} мм ${pdirTxt(c.pdir)} · вода ~${c.wt}° · окна: ${win}</p>
+    <p style="font-size:12.5px;color:var(--slate);margin:2px 0 8px">${c.maxT}° / ${c.minT}° · давление ${c.avgP||'—'} мм ${pdirTxt(c.pdir)} · вода ~${c.wt}° · окна: ${win}</p>
+    ${dayFactorsHTML(fc)}
     <div class="lbl">Что будет клевать</div>
     <div class="dayfish-list">${fishHTML}</div>
     <div class="fish-tip">${esc(fc.advice)}</div>`);
