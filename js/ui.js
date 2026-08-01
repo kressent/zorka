@@ -42,6 +42,20 @@ function wDesc(c){ if(c===0)return'ясно'; if(c<=2)return'переменна�
 function wIcon(c){ if(c===0)return'☀️'; if(c<=2)return'⛅'; if(c===3)return'☁️'; if(c<=49)return'🌫️'; if(c<=69)return'🌧️'; if(c<=79)return'❄️'; return'⛈️'; }
 function wdName(d){ return ['С','СВ','В','ЮВ','Ю','ЮЗ','З','СЗ'][Math.round(d/45)%8]; }
 function pdirTxt(p){ return p==='up'?'растёт ↑':p==='down'?'падает ↓':'стабильно →'; }
+// «почему такой балл» — прозрачные факторы дня (из уже посчитанного движком)
+function dayFactorsHTML(fc){
+  const c=fc.conditions, f=[];
+  if(c.pdir==='down') f.push(['давление падает ✓','good']);
+  else if(c.pdir==='up') f.push(['давление растёт','bad']);
+  if(fc.weatherBreak>0) f.push(['слом погоды — жор ✓','good']);
+  if(fc.moon){ if(fc.moon.sc>=4) f.push(['луна помогает ✓','good']); else if(fc.moon.sc<=2) f.push(['луна против','bad']); }
+  if(c.wind>=7) f.push([`ветер ${c.wind} м/с`,'bad']);
+  else if(c.avgWD!=null && (c.avgWD<=70||c.avgWD>=340) && c.wind>=3) f.push(['северный ветер','bad']);
+  if(c.drop>=4) f.push(['похолодание','bad']);
+  if(fc.water && fc.water.level>=2) f.push(['вода мутная','bad']);
+  if(!f.length) return '';
+  return `<div class="factors" style="margin-top:8px">${f.slice(0,5).map(([t,p])=>`<span class="ftag ${p}">${esc(t)}</span>`).join('')}</div>`;
+}
 
 function bars(sc){ const n=clampI(Math.round(sc),0,5); return `<span class="bars s${n}"><i></i><i></i><i></i><i></i><i></i></span>`; }
 
@@ -185,7 +199,8 @@ function renderForecast(){
           <span class="day">${fc.day.label}<br>${fc.day.score.toFixed(1)} / 5</span></div>
         <div class="sub">${wDesc(c.wcode)} · днём ${c.maxT}°, ночью ${c.minT}° · ${wdName(c.avgWD)} ${c.wind} м/с</div>
         <div class="sub">🌊 вода ~${c.wt}° · ${fc.water.label} · давление ${c.avgP} мм ${pdirTxt(c.pdir)}</div>
-        <div class="mood">${comfortMood(c)}</div></div>
+        <div class="mood">${comfortMood(c)}</div>
+        ${dayFactorsHTML(fc)}</div>
     </div>
     <svg class="wave" viewBox="0 0 340 22" preserveAspectRatio="none"><path d="M0,12 C60,3 110,20 170,12 C230,4 280,20 340,10 L340,0 L0,0 Z" fill="#EFE9DB"/></svg>
     <div class="body">
