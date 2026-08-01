@@ -31,6 +31,7 @@ const SHELL = [
   './js/water.js',
   './js/nearby.js',
   './js/calibrate.js',
+  './js/waterref.js',
   './js/records.js',
   './js/achievements.js',
   './js/catchcard.js',

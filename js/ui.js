@@ -24,6 +24,7 @@ import { summarizeWater, WATER_STATES } from './water.js';
 import { nearbyCatches, whereSpecies } from './nearby.js';
 import { clusterWaters, waterProfile } from './waterbodies.js';
 import { nearbySignal, calibrate } from './calibrate.js';
+import { refWaters, refWhere, inRefRegion } from './waterref.js';
 import { personalRecords, fishingYear } from './records.js';
 import { achievements } from './achievements.js';
 import { forecastPost } from './postgen.js';
@@ -405,9 +406,23 @@ function openWaters(){
     const sp = w.species.slice(0,4).map(s=>{ const f=byId(s.species); return (f?f.n:esc(s.species))+' ·'+s.count; }).join(', ');
     return `<div class="where-row" onclick="Z.waterProfile('${encodeURIComponent(w.key)}')" style="cursor:pointer"><div class="wr-place"><b>${esc(w.name)}</b><span class="wr-km">${w.count} ${w.count<5?'улова':'уловов'} ▸</span></div><div class="wr-meta">${sp||'—'}</div></div>`;
   }).join('');
+  // справочник по региону (Башкортостан) — холодный старт, честно помечен
+  const la=ST.city?ST.city.lat:null, lo=ST.city?ST.city.lon:null;
+  let refHTML='';
+  if(inRefRegion(la,lo)){
+    const known = new Set(list.map(w=>String(w.name).trim().toLowerCase()));
+    const ref = refWaters(la,lo).filter(w=>!known.has(w.name.toLowerCase())).slice(0,8);
+    if(ref.length){
+      const rr = ref.map(w=>{ const sp=w.species.slice(0,4).map(s=>{const f=byId(s);return f?f.n:esc(s);}).join(', ');
+        const mo=w.months&&w.months.length?` · пик ${MONTHS_GEN[w.months[0]-1]}–${MONTHS_GEN[w.months[w.months.length-1]-1]}`:'';
+        return `<div class="where-row"><div class="wr-place"><b>${esc(w.name)}</b><span class="wr-km">${esc(w.type)}</span></div><div class="wr-meta">${sp}${mo}</div></div>`; }).join('');
+      refHTML=`<div class="lbl" style="margin-top:16px">🗺 Водоёмы Башкирии <span class="lbl-sub">(справочно, не по уловам)</span></div>${rr}`;
+    }
+  }
   openModal(`<h3>🌊 Водоёмы — по уловам рыбаков</h3>
     <p style="font-size:12px;color:var(--slate);margin:2px 0 10px">Где что ловится, по реальным уловам сообщества. Тапни водоём → полный профиль. Чем больше рыбаков — тем полнее список.</p>
-    ${rows || '<p style="color:var(--slate);font-size:13px">Пока уловов мало. Список наполнится, когда рыбаки начнут вести дневники 🎣</p>'}`);
+    ${rows || '<p style="color:var(--slate);font-size:13px">Реальных уловов пока мало — ниже справочник по региону. Список «оживёт», когда рыбаки начнут вести дневники 🎣</p>'}
+    ${refHTML}`);
 }
 // профиль водоёма: виды + ходовая приманка + крупнейший вес + лучшие месяцы (killer-фича)
 function openWaterProfile(keyEnc){
@@ -436,10 +451,19 @@ function openWhere(species){
   const rows = list.length ? list.map(x=>{
     const d=x.caught_at?new Date(x.caught_at):null; const dl=d?`${d.getDate()} ${MONTHS_GEN[d.getMonth()]}`:'';
     return `<div class="where-row"><div class="wr-place"><b>${x.water_name?esc(x.water_name):'Без названия'}</b>${x.km!=null?`<span class="wr-km">~${x.km} км</span>`:''}</div><div class="wr-meta">${x.weight?fmtW(x.weight)+' · ':''}${x.lure?'на '+esc(x.lure)+' · ':''}${dl}</div></div>`;
-  }).join('') : `<p style="color:var(--slate);font-size:13px;margin-top:8px">Пока никто не отмечал этот вид рядом. Появится, когда рыбаки начнут делиться уловами — это и есть наш маховик. 🎣</p>`;
+  }).join('') : `<p style="color:var(--slate);font-size:13px;margin-top:8px">Реальных отметок рядом пока нет — ниже справочник по региону. Появятся, когда рыбаки начнут делиться уловами (это и есть маховик). 🎣</p>`;
+  let refHTML='';
+  if(inRefRegion(lat,lon)){
+    const ref=refWhere(species,lat,lon).slice(0,6);
+    if(ref.length){
+      const rr=ref.map(w=>{ const mo=w.months&&w.months.length?`пик ${MONTHS_GEN[w.months[0]-1]}–${MONTHS_GEN[w.months[w.months.length-1]-1]}`:'';
+        return `<div class="where-row"><div class="wr-place"><b>${esc(w.name)}</b><span class="wr-km">${esc(w.type)}</span></div><div class="wr-meta">${mo}</div></div>`; }).join('');
+      refHTML=`<div class="lbl" style="margin-top:16px">🗺 Где типичен в Башкирии <span class="lbl-sub">(справочно)</span></div>${rr}`;
+    }
+  }
   openModal(`<h3>Где ловится: ${nm}</h3>
     <p style="font-size:12px;color:var(--slate);margin:2px 0 10px">По реальным уловам рыбаков (места огрублённые, до 300 км от тебя).</p>
-    ${rows}`);
+    ${rows}${refHTML}`);
 }
 
 // ── рейтинг приманок «что на что реально берёт» (маховик данных) ──
