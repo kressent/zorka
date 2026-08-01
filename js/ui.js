@@ -272,7 +272,7 @@ function renderMap(){
   setTimeout(async ()=>{
     await MapView.initMap('mapEl', center, places, (la,lo)=>Z.mapPick(la,lo), ST.mapView);
     if(cloudEnabled() && mapShowCatches){
-      try{ const items=await Cloud.fetchFeed(80);
+      try{ const items=await getFeed();
         MapView.drawCatches(items.filter(t=>t.lat!=null&&t.lon!=null).map(t=>({
           lat:t.lat, lon:t.lon, water_name:t.water_name,
           label:(t.fish||[]).filter(f=>f&&f.species).map(f=>{ const b=byId(f.species); return (b?b.n:f.species)+(f.weight?' '+fmtW(f.weight):''); }).join(', ')
@@ -358,7 +358,7 @@ async function reportWater(state){
 
 // ── «что ловят рядом» (маховик по месту) ──
 let NEARBY_TRIPS = [];
-async function loadNearby(){ if(!cloudEnabled()) return; try{ NEARBY_TRIPS=await Cloud.fetchFeed(80); rerender(); }catch(e){} }
+async function loadNearby(){ if(!cloudEnabled()) return; try{ NEARBY_TRIPS=await getFeed(); rerender(); }catch(e){} }
 function nearbyHTML(){
   if(!cloudEnabled() || !ST.city) return '';
   const list = nearbyCatches(NEARBY_TRIPS, ST.city.lat, ST.city.lon, 60).slice(0,6);
@@ -500,11 +500,19 @@ function renderFeed(){
     <div class="feed-modes">${btn('all','Все')}${btn('near','📍 Рядом')}${btn('mine','Мои')}</div>
     <div id="feedBody"><div class="center" style="min-height:180px"><div class="loader"></div></div></div><div style="height:10px"></div></div>`;
 }
+// общий кэш ленты: одна загрузка на ленту/карту/прогноз (force — освежить сразу)
+let _feedCache=null, _feedAt=0;
+async function getFeed(force){
+  const now=Date.now();
+  if(!force && _feedCache && (now-_feedAt)<90000) return _feedCache;
+  _feedCache = await Cloud.fetchFeed(80); _feedAt=now; return _feedCache;
+}
+function invalidateFeed(){ _feedCache=null; _feedAt=0; }
 async function loadFeed(){
   const box=$('feedBody'); if(!box) return;
   if(!cloudEnabled()){ box.innerHTML=feedEmpty('Облако не настроено.'); return; }
   try{
-    const items=await Cloud.fetchFeed(60);
+    const items=await getFeed(true);
     if(!items.length){ box.innerHTML=feedEmpty('Пока пусто. Запиши улов в дневнике — и он появится тут (для всех, место огрублённо).'); return; }
     const me = Cloud.cachedUser() ? await Cloud.currentUserId() : null;
     const liked = me ? await Cloud.myLikes(items.map(i=>i.id)) : new Set();
@@ -641,6 +649,7 @@ let rtTimer=null;
 function onCommunityChange(){
   clearTimeout(rtTimer);
   rtTimer=setTimeout(()=>{
+    invalidateFeed();                                // данные изменились → кэш устарел
     if(cmTrip && $('cmList')) refreshComments();     // открыта модалка → обновить (она же освежит ленту)
     else if(ST.tab==='feed') loadFeed();             // видна лента → обновить счётчики
     checkEngagement();                               // живой колокольчик
@@ -946,7 +955,7 @@ function saveEntry(){
     } else {
       const coords = (saved.lat!=null&&saved.lon!=null) ? {lat:saved.lat,lon:saved.lon} : (ST.city?{lat:ST.city.lat,lon:ST.city.lon}:{});
       Cloud.publishCatches(saved, ST.city?ST.city.name:'', coords)
-        .then(()=>{ if((saved.catches||[]).length) toast('Улов в ленте 🎣'); })
+        .then(()=>{ invalidateFeed(); if((saved.catches||[]).length) toast('Улов в ленте 🎣'); })
         .catch(e=>{ console.warn('publish:',e); toast('Лента не приняла: '+(e.message||e)); });
     }
   }
