@@ -317,7 +317,7 @@ function urlB64ToUint8(b64) {
   return Uint8Array.from([...raw].map(ch => ch.charCodeAt(0)));
 }
 
-export async function enablePush() {
+export async function enablePush(loc) {
   if (!pushConfigured()) throw new Error('Пуши ещё не настроены владельцем приложения.');
   if (!('serviceWorker' in navigator) || !('PushManager' in window)) throw new Error('Браузер не поддерживает пуши.');
   const perm = await Notification.requestPermission();
@@ -326,10 +326,31 @@ export async function enablePush() {
   const sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: urlB64ToUint8(CONFIG.VAPID_PUBLIC) });
   const c = await client(); const u = await currentUser(); if (!c || !u) throw new Error('Войди в аккаунт');
   const j = sub.toJSON();
-  const { error } = await c.from('push_subscriptions').upsert(
-    { user_id: u.id, endpoint: j.endpoint, p256dh: j.keys.p256dh, auth: j.keys.auth }, { onConflict: 'endpoint' });
-  if (error) throw error;
+  const row = { user_id: u.id, endpoint: j.endpoint, p256dh: j.keys.p256dh, auth: j.keys.auth };
+  if (loc && loc.lat != null && loc.lon != null) { row.lat = loc.lat; row.lon = loc.lon; row.place = loc.place || null; }
+  const { error } = await c.from('push_subscriptions').upsert(row, { onConflict: 'endpoint' });
+  if (error) {
+    // столбцы координат появятся после миграции 019 — не валим подписку из-за них
+    if (/column .* does not exist/i.test(error.message || '')) {
+      const { error: e2 } = await c.from('push_subscriptions').upsert(
+        { user_id: u.id, endpoint: j.endpoint, p256dh: j.keys.p256dh, auth: j.keys.auth }, { onConflict: 'endpoint' });
+      if (e2) throw e2;
+    } else throw error;
+  }
   return true;
+}
+
+// обновить точку подписки (когда рыбак сменил город, а пуши уже включены)
+export async function updatePushLocation(loc) {
+  try {
+    if (!(loc && loc.lat != null && loc.lon != null)) return;
+    if (typeof Notification === 'undefined' || Notification.permission !== 'granted') return;
+    const c = await client(); const u = await currentUser(); if (!c || !u) return;
+    const reg = await navigator.serviceWorker.ready;
+    const sub = await reg.pushManager.getSubscription(); if (!sub) return;
+    await c.from('push_subscriptions').update({ lat: loc.lat, lon: loc.lon, place: loc.place || null })
+      .eq('endpoint', sub.endpoint).then(() => {}, () => {});
+  } catch (e) {}
 }
 
 export async function signOut() {

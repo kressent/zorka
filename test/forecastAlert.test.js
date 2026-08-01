@@ -41,5 +41,20 @@ check('пустой ввод не падает', () => {
   assert.equal(goodDayAlert([], 3), null);
 });
 
+// параметры серверного пуша forecast-push (minScore 4.2, horizon 2)
+check('forecast-push: сильный день в пределах horizon=2 → зовёт', () => {
+  const a = goodDayAlert(up, 3.0, { minScore: 4.2, horizon: 2 }); // 4.5 на позиции 1
+  assert.ok(a, 'должно позвать на завтра/послезавтра');
+});
+
+check('forecast-push: сильный день на 3-й позиции вне horizon=2 → молчит', () => {
+  const u2 = [
+    { date: 'a', name: 'Завтра', score: 3.0 },
+    { date: 'b', name: 'Вс', score: 3.2 },
+    { date: 'c', name: 'Пн', score: 4.6 },   // за пределами horizon=2
+  ];
+  assert.equal(goodDayAlert(u2, 3.0, { minScore: 4.2, horizon: 2 }), null);
+});
+
 console.log('\nИтог: ' + pass + ' ✓, ' + fail + ' ✗\n');
 if (fail) process.exit(1);

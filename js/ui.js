@@ -117,6 +117,7 @@ export async function loadWeather(){
     }catch(e){}
     if(cloudEnabled() && !WATER_REPORTS.length) setTimeout(loadWaterReports, 300);
     if(cloudEnabled() && !_feedCache) setTimeout(loadNearby, 500);
+    if(cloudEnabled()) Cloud.updatePushLocation(pushLoc()); // освежить точку пуша «завтра жор»
   }catch(e){
     main.innerHTML = `<div class="center"><div class="ic">📡</div><h2>Нет связи</h2><p>Не удалось загрузить погоду и нет сохранённой копии.</p><button class="act" style="max-width:220px" onclick="Z.reload()">Повторить</button></div>`;
     $('tabbar').innerHTML=navHTML();
@@ -900,16 +901,18 @@ async function acSyncNow(){
   try{ toast('Синхронизирую…'); await Sync.syncNow(); closeModal(); toast('Синхронизировано ☁️'); rerender(); }
   catch(e){ alert('Не удалось: '+(e.message||e)); }
 }
+// текущая точка для пуша по прогнозу (город/водоём пользователя)
+function pushLoc(){ return ST.city ? { lat:ST.city.lat, lon:ST.city.lon, place:ST.city.name } : null; }
 async function acEnablePush(){
-  try{ await Cloud.enablePush(); try{localStorage.setItem('zorka_push_asked','1');}catch(e){} toast('Пуш включён — будем присылать на телефон 📲'); }
+  try{ await Cloud.enablePush(pushLoc()); try{localStorage.setItem('zorka_push_asked','1');}catch(e){} toast('Пуш включён — будем присылать на телефон 📲'); }
   catch(e){ alert('Не удалось: '+(e.message||e)); }
 }
-// авто-подписка: если на устройстве уже разрешены уведомления — подписать молча
+// авто-подписка: если на устройстве уже разрешены уведомления — подписать молча + освежить точку
 function autoPush(){
   try{
     if(cloudEnabled() && Cloud.cachedUser() && Cloud.pushConfigured()
        && typeof Notification!=='undefined' && Notification.permission==='granted')
-      Cloud.enablePush().catch(()=>{});
+      Cloud.enablePush(pushLoc()).catch(()=>{});
   }catch(e){}
 }
 // один раз при первом запуске (как в нативных приложениях) — спросить про пуш
