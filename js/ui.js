@@ -858,6 +858,8 @@ function renderEntry(){
   openModal(`<h3>${ruDateFull(d)}</h3>
     <div class="field"><label>Дата рыбалки</label><input type="date" id="e_date" value="${draft.date}" max="${new Date().toISOString().slice(0,10)}" onchange="Z.setDate(this.value)"></div>
     <div class="field"><label>Место (по желанию)</label><input id="e_spot" value="${esc(draft.spot||'')}" placeholder="напр. Устье Нугуша"></div>
+    <div class="field"><label>Точка на карте (по желанию)</label>
+      <button class="act" style="margin-top:0;padding:9px;border-color:var(--jade);color:var(--jade)" onclick="Z.pickEntryLoc()">📍 ${draft.lat!=null?`Точка задана ✓ (${draft.lat.toFixed(3)}, ${draft.lon.toFixed(3)}) — изменить`:'Указать место на карте'}</button></div>
     <div class="field"><label>Что поймал — по каждой рыбе свой вес</label><div class="fishpick">${picker}</div></div>
     <div id="catchRows">${rows||'<p style="font-size:12px;color:var(--slate);margin:6px 0">Нажми на рыбу выше, чтобы добавить. Вес пустой = «не взвешивал».</p>'}</div>
     <div class="field"><label>Оценка</label><div class="stars" id="stars">${stars}</div></div>
@@ -881,6 +883,19 @@ function setLure(i,l){ if(!draft||!draft.catches[i]) return; syncEntryFields(); 
 function lureCustom(i){ if(!draft||!draft.catches[i]) return; syncEntryFields(); const v=prompt('На что поймал? (приманка/наживка)', draft.catches[i].lure||''); if(v!=null){ const t=v.trim(); draft.catches[i].lure=t||null; renderEntry(); } }
 function setRating(r){ draft.rating=r; syncEntryFields(); renderEntry(); }
 function setPrivate(v){ if(draft) draft.private=!!v; }
+function pickEntryLoc(){
+  if(!draft) return; syncEntryFields();
+  const center = (draft.lat!=null) ? {lat:draft.lat,lon:draft.lon} : (ST.city?{lat:ST.city.lat,lon:ST.city.lon}:{lat:54,lon:56});
+  openModal(`<h3>Место рыбалки на карте</h3>
+    <p style="font-size:12.5px;color:var(--slate);margin:2px 0 8px">Тапни точку, где ловил — заводь, перекат, яма. Потом «Готово».</p>
+    <div id="entryMap" style="height:300px;border:1px solid var(--rule);background:#dfe6e0;z-index:0"></div>
+    <p id="entryLocLbl" style="font-size:12px;color:var(--slate);margin-top:8px">${draft.lat!=null?`Точка: ${draft.lat.toFixed(4)}, ${draft.lon.toFixed(4)}`:'Точка не выбрана'}</p>
+    <button class="act" onclick="Z.entryBack()">← Готово, назад к записи</button>
+    ${draft.lat!=null?`<button class="act" style="border-color:var(--bad);color:var(--bad);margin-top:8px" onclick="Z.clearEntryLoc()">Убрать точку</button>`:''}`);
+  setTimeout(()=>MapView.initPicker('entryMap', center, (la,lo)=>{ draft.lat=la; draft.lon=lo; const el=$('entryLocLbl'); if(el) el.textContent='Точка: '+la.toFixed(4)+', '+lo.toFixed(4); }, ST.mapView||'satellite'), 80);
+}
+function entryBack(){ renderEntry(); }
+function clearEntryLoc(){ if(draft){ draft.lat=null; draft.lon=null; } renderEntry(); }
 function setDate(v){
   if(!v || !draft) return; syncEntryFields();
   const ex = Diary.entryByDate(v);
@@ -906,7 +921,8 @@ function saveEntry(){
     if(saved.private){
       Cloud.unpublishEntry(saved.id).then(()=>toast('Сохранено, в ленту не попало 🔒')).catch(e=>console.warn('unpublish:',e));
     } else {
-      Cloud.publishCatches(saved, ST.city?ST.city.name:'', ST.city?{lat:ST.city.lat,lon:ST.city.lon}:{})
+      const coords = (saved.lat!=null&&saved.lon!=null) ? {lat:saved.lat,lon:saved.lon} : (ST.city?{lat:ST.city.lat,lon:ST.city.lon}:{});
+      Cloud.publishCatches(saved, ST.city?ST.city.name:'', coords)
         .then(()=>{ if((saved.catches||[]).length) toast('Улов в ленте 🎣'); })
         .catch(e=>{ console.warn('publish:',e); toast('Лента не приняла: '+(e.message||e)); });
     }
@@ -1007,7 +1023,7 @@ export function initUI(){
     openCity, searchCity, pickCity, cityPick, geo, closeModal, openNotif, shareForecast, onboardDone, openMoon, openDay, reportWater, clearNotifs,
     openAccount, signIn: acSignIn, setPass: acSetPass, signOut: acSignOut, syncNow: acSyncNow, saveHandle: acSaveHandle, enablePush: acEnablePush, install: promptInstall,
     like: feedLike, comments: openComments, sendComment, delComment, feedMode:(m)=>{ feedFilter=m; rerender(); }, feedSp:(s)=>{ feedSpecies=(s&&s!==feedSpecies)?s:null; loadFeed(); }, where: openWhere,
-    newEntry, editEntry, addCatch, rmCatch, setW, setLure, lureCustom, setRating, setPrivate, setDate, saveEntry, delEntry, shareCatch, openRecords, exportDiary, importDiary,
+    newEntry, editEntry, addCatch, rmCatch, setW, setLure, lureCustom, setRating, setPrivate, setDate, pickEntryLoc, entryBack, clearEntryLoc, saveEntry, delEntry, shareCatch, openRecords, exportDiary, importDiary,
     newKit, editKit, kitIcon, kitTarget, addLure, lureQty, rmLure, saveKit, delKit,
     mapView:(v)=>{ ST.mapView=v; MapView.setLayer(v); document.querySelectorAll('.mtoggle button').forEach((b,i)=>b.classList.toggle('on',(i===0)===(v==='satellite'))); },
     mapPick:(la,lo)=>newPlace({lat:la,lon:lo}), newPlace, placeGeo, savePlace, delPlace, mapCatches:(v)=>{ mapShowCatches=!!v; rerender(); },
