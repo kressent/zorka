@@ -714,7 +714,7 @@ function maybeOnboard(){
     </div>
     <button class="act" onclick="Z.onboardDone()">Поехали! 🐟</button>`);
 }
-function onboardDone(){ try{ localStorage.setItem('zorka_onboarded','1'); }catch(e){} closeModal(); }
+function onboardDone(){ try{ localStorage.setItem('zorka_onboarded','1'); }catch(e){} closeModal(); setTimeout(maybePushPrompt, 500); }
 
 // облако / аккаунт
 let authEmail = '';
@@ -789,7 +789,7 @@ async function acSignIn(){
   if(!authEmail || !authEmail.includes('@')){ alert('Введи корректную почту'); return; }
   if(!pass || pass.length<6){ alert('Пароль — минимум 6 символов'); return; }
   const s=document.querySelector('#modal .sheet'); const btn=s&&s.querySelector('.act'); if(btn) btn.textContent='Вхожу…';
-  try{ await Cloud.signInOrUp(authEmail, pass); closeModal(); toast('Вход выполнен — облако подключено ☁️'); Cloud.ensureProfile().catch(()=>{}); Cloud.subscribeCommunity(onCommunityChange).catch(()=>{}); setTimeout(checkEngagement,1500); rerender(); Sync.syncOnLogin(); }
+  try{ await Cloud.signInOrUp(authEmail, pass); closeModal(); toast('Вход выполнен — облако подключено ☁️'); Cloud.ensureProfile().catch(()=>{}); Cloud.subscribeCommunity(onCommunityChange).catch(()=>{}); setTimeout(checkEngagement,1500); setTimeout(autoPush,1200); setTimeout(maybePushPrompt,1800); rerender(); Sync.syncOnLogin(); }
   catch(e){ alert(errMsg(e)); if(btn) btn.textContent='Войти'; }
 }
 async function acSetPass(){
@@ -805,9 +805,32 @@ async function acSyncNow(){
   catch(e){ alert('Не удалось: '+(e.message||e)); }
 }
 async function acEnablePush(){
-  try{ await Cloud.enablePush(); toast('Пуш включён — будем присылать на телефон 📲'); }
+  try{ await Cloud.enablePush(); try{localStorage.setItem('zorka_push_asked','1');}catch(e){} toast('Пуш включён — будем присылать на телефон 📲'); }
   catch(e){ alert('Не удалось: '+(e.message||e)); }
 }
+// авто-подписка: если на устройстве уже разрешены уведомления — подписать молча
+function autoPush(){
+  try{
+    if(cloudEnabled() && Cloud.cachedUser() && Cloud.pushConfigured()
+       && typeof Notification!=='undefined' && Notification.permission==='granted')
+      Cloud.enablePush().catch(()=>{});
+  }catch(e){}
+}
+// один раз при первом запуске (как в нативных приложениях) — спросить про пуш
+function maybePushPrompt(){
+  try{
+    if(!(cloudEnabled() && Cloud.cachedUser() && Cloud.pushConfigured())) return;
+    if(typeof Notification==='undefined' || Notification.permission!=='default') return;
+    if(localStorage.getItem('zorka_push_asked')) return;
+    if($('modal')) { setTimeout(maybePushPrompt, 4000); return; } // другое окно открыто — позже
+    openModal(`<h3>🔔 Уведомления</h3>
+      <p style="font-size:13.5px;line-height:1.5;margin:6px 0 14px">Присылать уведомления, когда твой улов лайкнут или прокомментируют — и о хорошем клёве впереди? Выключить можно в любой момент.</p>
+      <button class="act" onclick="Z.pushAllow()">🔔 Включить уведомления</button>
+      <button class="act" style="border-color:var(--slate);color:var(--slate);margin-top:8px" onclick="Z.pushLater()">Позже</button>`);
+  }catch(e){}
+}
+function pushAllow(){ try{ localStorage.setItem('zorka_push_asked','1'); }catch(e){} closeModal(); acEnablePush(); }
+function pushLater(){ try{ localStorage.setItem('zorka_push_asked','1'); }catch(e){} closeModal(); }
 async function acSaveHandle(){
   const el=$('ac_handle'); if(!el) return; const h=el.value.trim();
   if(h.length<2){ alert('Имя слишком короткое'); return; }
@@ -1076,7 +1099,7 @@ export function initUI(){
   if(typeof window!=='undefined' && window.addEventListener) window.addEventListener('beforeinstallprompt', e=>{ e.preventDefault(); deferredPrompt=e; });
   if(typeof document!=='undefined' && document.body) setTimeout(maybeOnboard, 900);
   Sync.onSynced(() => rerender());
-  if (cloudEnabled() && Cloud.cachedUser()) { Sync.syncOnLogin(); Cloud.ensureProfile().catch(()=>{}); setTimeout(checkEngagement, 1800); }
+  if (cloudEnabled() && Cloud.cachedUser()) { Sync.syncOnLogin(); Cloud.ensureProfile().catch(()=>{}); setTimeout(checkEngagement, 1800); setTimeout(autoPush, 2000); setTimeout(maybePushPrompt, 2800); }
   if (cloudEnabled()) setTimeout(loadLureStats, 600);
   if (cloudEnabled() && Cloud.cachedUser()) Cloud.subscribeCommunity(onCommunityChange).catch(()=>{});
   // возврат по ссылке из письма: supabase кладёт токен в hash — примем сессию
@@ -1090,7 +1113,7 @@ export function initUI(){
     filter:(f)=>{ ST.filter=f; saveSettings(); rerender(); },
     tf:(el)=>el.classList.toggle('open'),
     openCity, searchCity, pickCity, cityPick, geo, closeModal, openNotif, shareForecast, onboardDone, openMoon, openDay, reportWater, clearNotifs, openWaters,
-    openAccount, signIn: acSignIn, setPass: acSetPass, signOut: acSignOut, syncNow: acSyncNow, saveHandle: acSaveHandle, enablePush: acEnablePush, install: promptInstall,
+    openAccount, signIn: acSignIn, setPass: acSetPass, signOut: acSignOut, syncNow: acSyncNow, saveHandle: acSaveHandle, enablePush: acEnablePush, pushAllow, pushLater, install: promptInstall,
     like: feedLike, comments: openComments, sendComment, delComment, feedMode:(m)=>{ feedFilter=m; rerender(); }, feedSp:(s)=>{ feedSpecies=(s&&s!==feedSpecies)?s:null; loadFeed(); }, where: openWhere,
     newEntry, editEntry, addCatch, rmCatch, setW, setLure, lureCustom, setRating, setPrivate, setDate, pickEntryLoc, entryBack, clearEntryLoc, entryLocSearch, entryLocGo, saveEntry, delEntry, shareCatch, openRecords, exportDiary, importDiary,
     newKit, editKit, kitIcon, kitTarget, addLure, lureQty, rmLure, saveKit, delKit,
