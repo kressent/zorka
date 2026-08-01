@@ -136,13 +136,70 @@ export async function makeCatchCard(entry, cityName) {
   return await new Promise(res => c.toBlob(b => res(b), 'image/png'));
 }
 
+// ── «Твой рыболовный год» — виральная итог-карточка ──
+function fmtWtot(gr) {
+  const x = Number(gr) || 0;
+  return x < 1000 ? Math.round(x) + ' г' : (x / 1000).toFixed(1).replace('.', ',') + ' кг';
+}
+export async function makeYearCard(s) {
+  const W = 1080, H = 1350;
+  const c = document.createElement('canvas'); c.width = W; c.height = H;
+  const g = c.getContext('2d');
+  g.fillStyle = PAPER; g.fillRect(0, 0, W, H);
+  g.strokeStyle = INK;   g.lineWidth = 7; strokeRectR(g, 46, 46, W-92, H-92);
+  g.strokeStyle = BRASS; g.lineWidth = 2; strokeRectR(g, 66, 66, W-132, H-132);
+  const cx = W / 2; g.textAlign = 'center';
+
+  let y = 172;
+  setLS(g, 8); g.fillStyle = JADE; g.font = `700 40px ${SERIF}`; g.fillText('НА КРЮЧКЕ', cx, y);
+  setLS(g, 5); g.fillStyle = SLATE; g.font = `600 22px ${SANS}`; g.fillText('РЫБОЛОВНЫЙ ГОД', cx, y + 34); setLS(g, 0);
+
+  y += 176; g.fillStyle = INK; g.font = `700 150px ${SERIF}`; g.fillText(String(s.year), cx, y);
+  y += 34; hr(g, 130, y, W-130);
+
+  // сетка 2×2 главных чисел
+  const stats = [
+    [String(s.totalFish), 'рыб поймано'],
+    [fmtWtot(s.totalG), 'общий вес'],
+    [String(s.speciesCount), s.speciesCount === 1 ? 'вид рыбы' : 'видов рыбы'],
+    [String(s.days), s.days === 1 ? 'выезд' : 'выездов'],
+  ];
+  const colX = [W * 0.30, W * 0.70], rowY = [y + 130, y + 292];
+  stats.forEach((st, i) => {
+    const xx = colX[i % 2], yy = rowY[Math.floor(i / 2)];
+    g.fillStyle = BRASS; g.font = `700 74px ${SERIF}`; g.fillText(st[0], xx, yy);
+    g.fillStyle = SLATE; g.font = `24px ${SANS}`; g.fillText(st[1], xx, yy + 40);
+  });
+  y = rowY[1] + 96; hr(g, 130, y, W-130);
+
+  // рекорд года
+  if (s.personalBest) {
+    y += 64; setLS(g, 3); g.fillStyle = SLATE; g.font = `22px ${SANS}`; g.fillText('РЕКОРД ГОДА', cx, y); setLS(g, 0);
+    y += 56; g.fillStyle = INK; g.font = `700 52px ${SERIF}`;
+    const pb = s.personalBest.name + (s.personalBest.weight != null ? ' · ' + fmtW(s.personalBest.weight) : '');
+    g.fillText(pb, cx, y);
+  }
+
+  // строки-хайлайты
+  y += 74; g.font = `28px ${SANS}`; g.fillStyle = SLATE;
+  const lines = [];
+  if (s.trophies) lines.push(`🏆 трофеев: ${s.trophies}`);
+  if (s.bestMonth) lines.push(`📅 лучший месяц: ${s.bestMonth.name} · ${s.bestMonth.count}`);
+  if (s.favLure) lines.push(`🎣 любимая приманка: ${s.favLure.lure}`);
+  if (s.waters) lines.push(`🌊 водоёмов: ${s.waters}`);
+  lines.slice(0, 4).forEach((l, i) => g.fillText(l, cx, y + i * 44));
+
+  g.fillStyle = JADE; g.font = `italic 30px ${SERIF}`; g.fillText('Знай, когда клюёт', cx, H - 120);
+  return await new Promise(res => c.toBlob(b => res(b), 'image/png'));
+}
+
 // поделиться (мобильный Web Share, нужен HTTPS) или скачать PNG.
 // Возвращает 'shared' | 'saved' | 'cancelled'.
-export async function shareCard(blob, filename = 'ulov-zorka.png') {
+export async function shareCard(blob, filename = 'ulov-zorka.png', text = 'Мой улов 🎣 На крючке — прогноз клёва') {
   try {
     const file = new File([blob], filename, { type: 'image/png' });
     if (navigator.canShare && navigator.canShare({ files: [file] })) {
-      await navigator.share({ files: [file], text: 'Мой улов 🎣 На крючке — прогноз клёва' });
+      await navigator.share({ files: [file], text });
       return 'shared';
     }
   } catch (e) { if (e && e.name === 'AbortError') return 'cancelled'; }

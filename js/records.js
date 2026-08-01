@@ -41,3 +41,30 @@ export function personalRecords(entries) {
     biggest,
   };
 }
+
+// «Твой рыболовный год» — итоги за конкретный год для виральной карточки.
+// Год-скоуп поверх personalRecords + лучший день и лучший месяц. Чистая логика.
+const MONTHS_RU = ['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
+export function fishingYear(entries, year) {
+  const y = String(year);
+  const sel = (entries || []).filter(e => e && e.date && String(e.date).slice(0, 4) === y);
+  const rec = personalRecords(sel);
+  const byMonth = new Array(12).fill(0); const byDay = {};
+  for (const e of sel) {
+    const cs = e.catches || []; if (!cs.length) continue;
+    const m = new Date(e.date + 'T12:00:00').getMonth();
+    if (m >= 0 && m < 12) byMonth[m] += cs.length;
+    const dd = (byDay[e.date] || (byDay[e.date] = { count: 0, g: 0 }));
+    dd.count += cs.length; for (const c of cs) dd.g += c.weight || 0;
+  }
+  let bestDay = null;
+  for (const [date, v] of Object.entries(byDay)) if (!bestDay || v.count > bestDay.count) bestDay = { date, ...v };
+  let bmi = -1, bmv = 0; for (let i = 0; i < 12; i++) if (byMonth[i] > bmv) { bmv = byMonth[i]; bmi = i; }
+  return {
+    year: y, ...rec,
+    bestDay, byMonth,
+    bestMonth: bmi >= 0 ? { month: bmi, name: MONTHS_RU[bmi], count: bmv } : null,
+    hasData: sel.some(e => (e.catches || []).length),
+  };
+}
+export { MONTHS_RU };

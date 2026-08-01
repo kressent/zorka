@@ -9,7 +9,7 @@ import { CITIES, searchCities, nearestCity, geolocate, geoSearch, reverseGeocode
          getPlaces, addPlace, removePlace, savePlaces } from './locations.js';
 import * as Diary from './diary.js';
 import * as Tackle from './tackle.js';
-import { makeCatchCard, shareCard } from './catchcard.js';
+import { makeCatchCard, makeYearCard, shareCard } from './catchcard.js';
 import * as Notify from './notify.js';
 import * as Regs from './regulations.js';
 import * as Cloud from './cloud.js';
@@ -23,7 +23,7 @@ import { sortByNear } from './geo.js';
 import { summarizeWater, WATER_STATES } from './water.js';
 import { nearbyCatches, whereSpecies } from './nearby.js';
 import { clusterWaters, waterProfile } from './waterbodies.js';
-import { personalRecords } from './records.js';
+import { personalRecords, fishingYear } from './records.js';
 import { achievements } from './achievements.js';
 import { forecastPost } from './postgen.js';
 import { cloudEnabled } from './config.js';
@@ -520,8 +520,42 @@ function openRecords(){
   openModal(`<h3>🏆 Рекорды и достижения</h3>${recHTML}${troHTML}
     <div class="lbl" style="margin-top:16px">Достижения · ${done}/${ach.length}</div>
     <div class="ach-grid">${achHTML}</div>
-    <button class="act" style="margin-top:16px" onclick="Z.exportDiary()">📥 Скачать дневник (резервная копия)</button>
+    <button class="act" style="margin-top:16px;border-color:var(--brass);color:var(--brass)" onclick="Z.openYear()">🗓 Твой рыболовный год →</button>
+    <button class="act" style="margin-top:8px" onclick="Z.exportDiary()">📥 Скачать дневник (резервная копия)</button>
     <button class="act" style="margin-top:8px" onclick="Z.importDiary()">📤 Восстановить из файла</button>`);
+}
+// «Твой рыболовный год» — виральная итог-карточка (выбор года, если их несколько)
+function openYear(yr){
+  const entries = Diary.getEntries();
+  const years = [...new Set(entries.filter(e=>e&&e.date).map(e=>String(e.date).slice(0,4)))].sort().reverse();
+  if(!years.length){ toast('Пока нет записей в дневнике 🎣'); return; }
+  const year = yr || years[0];
+  const s = fishingYear(entries, year);
+  if(!s.hasData){ toast('За '+year+' уловов ещё нет'); return; }
+  const pick = years.length>1 ? `<div class="yr-pick">${years.map(y=>`<button class="${y===year?'on':''}" onclick="Z.openYear('${y}')">${y}</button>`).join('')}</div>` : '';
+  const hi = [
+    s.personalBest?`🥇 Рекорд: <b>${esc(s.personalBest.name)} ${fmtW(s.personalBest.weight)}</b>`:'',
+    s.bestMonth?`📅 Лучший месяц: <b>${esc(s.bestMonth.name)}</b> · ${s.bestMonth.count}`:'',
+    s.favLure?`🎣 Приманка года: <b>${esc(s.favLure.lure)}</b>`:'',
+    s.trophies?`🏆 Трофеев: <b>${s.trophies}</b>`:'',
+  ].filter(Boolean).map(l=>`<div class="rec-line">${l}</div>`).join('');
+  openModal(`<h3>🗓 Рыболовный год ${esc(year)}</h3>${pick}
+    <div class="prof-stats prof-stats-3">
+      <div><b>${s.totalFish}</b><span>рыб</span></div>
+      <div><b>${(s.totalG/1000).toFixed(1)}</b><span>кг</span></div>
+      <div><b>${s.days}</b><span>выездов</span></div>
+    </div>
+    ${hi}
+    <button class="act" style="margin-top:16px;border-color:var(--jade);color:var(--jade)" onclick="Z.shareYear('${esc(year)}')">📤 Поделиться карточкой года</button>`);
+}
+async function shareYear(year){
+  const s = fishingYear(Diary.getEntries(), year);
+  try{
+    const blob = await makeYearCard(s);
+    if(!blob) return;
+    const res = await shareCard(blob, 'god-nakryuchke-'+year+'.png', `Мой рыболовный год ${year} 🎣 На крючке`);
+    if(res==='saved') toast('Карточка года сохранена — поделись из галереи 📤');
+  }catch(err){ alert('Не удалось создать карточку: '+(err&&err.message||err)); }
 }
 function exportDiary(){
   try{
@@ -1157,7 +1191,7 @@ export function initUI(){
     like: feedLike, comments: openComments, sendComment, delComment, feedMode:(m)=>{ feedFilter=m; rerender(); }, feedSp:(s)=>{ feedSpecies=(s&&s!==feedSpecies)?s:null; loadFeed(); }, where: openWhere,
     leaderPeriod:(p)=>{ leaderPeriod=p; const box=$('leadBox'); if(box && _feedCache) box.outerHTML=leaderBoxHTML(_feedCache); },
     waterProfile: openWaterProfile,
-    newEntry, editEntry, addCatch, rmCatch, setW, setLure, lureCustom, setRating, setPrivate, setDate, pickEntryLoc, entryBack, clearEntryLoc, entryLocSearch, entryLocGo, saveEntry, delEntry, shareCatch, openRecords, exportDiary, importDiary,
+    newEntry, editEntry, addCatch, rmCatch, setW, setLure, lureCustom, setRating, setPrivate, setDate, pickEntryLoc, entryBack, clearEntryLoc, entryLocSearch, entryLocGo, saveEntry, delEntry, shareCatch, openRecords, openYear, shareYear, exportDiary, importDiary,
     newKit, editKit, kitIcon, kitTarget, addLure, lureQty, rmLure, saveKit, delKit,
     mapView:(v)=>{ ST.mapView=v; MapView.setLayer(v); document.querySelectorAll('.mtoggle button').forEach((b,i)=>b.classList.toggle('on',(i===0)===(v==='satellite'))); },
     mapPick:(la,lo)=>newPlace({lat:la,lon:lo}), newPlace, placeGeo, savePlace, delPlace, mapCatches:(v)=>{ mapShowCatches=!!v; rerender(); },

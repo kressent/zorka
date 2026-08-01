@@ -1,6 +1,6 @@
 // Тест личных рекордов и достижений (чистые функции).
 import assert from 'node:assert';
-import { personalRecords } from '../js/records.js';
+import { personalRecords, fishingYear } from '../js/records.js';
 import { achievements } from '../js/achievements.js';
 
 let pass = 0, fail = 0;
@@ -41,6 +41,29 @@ check('personalRecords — пустой дневник', () => {
   assert.equal(r.totalFish, 0);
   assert.equal(r.favLure, null);
   assert.equal(r.personalBest, null);
+});
+
+check('fishingYear — год-скоуп + лучший день/месяц', () => {
+  const mixed = entries.concat([
+    { date: '2025-08-10', spot: 'Старое', catches: [{ species: 'carp', weight: 4000, lure: 'бойл' }] },
+    { date: '2026-06-01', spot: 'Зирган', catches: [{ species: 'roach', weight: 100 }] },
+  ]);
+  const y = fishingYear(mixed, 2026);
+  assert.equal(y.year, '2026');
+  assert.equal(y.totalFish, 5);                 // 4 (июль) + 1 (июнь), без 2025
+  assert.equal(y.hasData, true);
+  assert.equal(y.bestMonth.month, 6);           // июль (индекс 6) — 4 рыбы
+  assert.equal(y.bestMonth.count, 4);
+  assert.equal(y.bestDay.date, '2026-07-24');   // 2 рыбы в день
+  assert.equal(y.byMonth[6], 4);
+  assert.equal(y.byMonth[5], 1);                // июнь
+});
+
+check('fishingYear — год без данных', () => {
+  const y = fishingYear(entries, 2020);
+  assert.equal(y.hasData, false);
+  assert.equal(y.totalFish, 0);
+  assert.equal(y.bestMonth, null);
 });
 
 check('achievements — открытые/закрытые бейджи', () => {
