@@ -27,14 +27,14 @@ export function engagementNotifs(mine, seen) {
     const nm = hf ? ((byId(hf.species) || {}).n || hf.species) : 'улов';
     const where = t.water_name ? ' · ' + t.water_name : '';
     if (likes > (prev.likes || 0)) {
-      notifs.push({ id: `like-${t.id}-${likes}`, kind: 'like',
+      notifs.push({ id: `like-${t.id}-${likes}`, kind: 'like', trip: t.id,
         title: '❤️ Твой улов оценили',
         body: `«${nm}»${where} — уже ${likes} ${plural(likes, 'лайк', 'лайка', 'лайков')}. Так держать!` });
     }
     if (comments > (prev.comments || 0)) {
-      notifs.push({ id: `cm-${t.id}-${comments}`, kind: 'comment',
+      notifs.push({ id: `cm-${t.id}-${comments}`, kind: 'comment', trip: t.id,
         title: '💬 Новый комментарий',
-        body: `к твоему улову «${nm}»${where}. Загляни в ленту — ответь рыбаку.` });
+        body: `к твоему улову «${nm}»${where}. Нажми, чтобы прочитать и ответить.` });
     }
   }
   return { notifs, next };

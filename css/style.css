@@ -347,6 +347,9 @@ button{font-family:inherit}
 .notif.unread{border-left-color:var(--brass);background:var(--brass-soft,#f4ead6)}
 .notif .nt{font-family:var(--font-serif);font-weight:700;font-size:15px}
 .notif .nb{font-size:12.5px;color:var(--slate);line-height:1.45;margin-top:4px}
+.notif-tap{cursor:pointer}
+.notif-tap:hover{border-left-color:var(--jade);background:rgba(44,110,90,.06)}
+.notif-tap .nb .chev{color:var(--jade);margin-left:2px}
 
 /* лента уловов */
 .feed-modes{display:flex;gap:6px;margin:10px 0 2px}

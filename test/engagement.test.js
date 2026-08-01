@@ -32,6 +32,13 @@ check('прирост комментариев → уведомление', () =
   assert.equal(notifs[0].kind, 'comment');
 });
 
+check('уведомление несёт ссылку на выезд (для тапа → комментарии)', () => {
+  const { notifs } = engagementNotifs(trip(0, 2), { 'u1:t1': { likes: 0, comments: 1 } });
+  assert.equal(notifs[0].trip, 'u1:t1');
+  const { notifs: ln } = engagementNotifs(trip(3, 0), { 'u1:t1': { likes: 2, comments: 0 } });
+  assert.equal(ln[0].trip, 'u1:t1');
+});
+
 check('лайк + комментарий сразу → два уведомления', () => {
   const { notifs } = engagementNotifs(trip(5, 3), { 'u1:t1': { likes: 4, comments: 2 } });
   assert.equal(notifs.length, 2);

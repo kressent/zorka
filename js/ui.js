@@ -988,7 +988,8 @@ async function acSaveHandle(){
 function openNotif(){
   const items = Notify.getNotifs();
   const body = items.length
-    ? items.map(n=>`<div class="notif${n.read?'':' unread'}"><div class="nt">${esc(n.title)}</div><div class="nb">${esc(n.body)}</div></div>`).join('')
+    ? items.map(n=>{ const tap = n.trip ? ` notif-tap" onclick="Z.notifOpen('${esc(n.trip)}')` : '';
+        return `<div class="notif${n.read?'':' unread'}${tap}"><div class="nt">${esc(n.title)}</div><div class="nb">${esc(n.body)}${n.trip?' <span class="chev">▸</span>':''}</div></div>`; }).join('')
     : `<div class="empty"><div class="ei">🔔</div><p>Пока уведомлений нет. Здесь будут запреты (нерест), жор и важное по твоему водоёму.</p></div>`;
   const clr = items.length ? `<button class="act" style="padding:6px;font-size:12px;margin:0 0 10px;border-color:var(--slate);color:var(--slate)" onclick="Z.clearNotifs()">Очистить всё</button>` : '';
   openModal(`<h3>Уведомления</h3>${clr}${body}`);
@@ -996,6 +997,8 @@ function openNotif(){
   rerender();
 }
 function clearNotifs(){ Notify.clearAll(); closeModal(); rerender(); }
+// тап по уведомлению о лайке/комментарии → открыть комментарии этого выезда
+function notifOpen(tripKey){ if(!tripKey) return; ST.tab='feed'; rerender(); openComments(tripKey); }
 
 // город
 function openCity(){
@@ -1258,7 +1261,7 @@ export function initUI(){
     tab, reload:()=>loadWeather(),
     filter:(f)=>{ ST.filter=f; saveSettings(); rerender(); },
     tf:(el)=>el.classList.toggle('open'),
-    openCity, searchCity, pickCity, cityPick, geo, closeModal, openNotif, shareForecast, onboardDone, openMoon, openDay, openConfidence, reportWater, clearNotifs, openWaters,
+    openCity, searchCity, pickCity, cityPick, geo, closeModal, openNotif, shareForecast, onboardDone, openMoon, openDay, openConfidence, reportWater, clearNotifs, notifOpen, openWaters,
     openAccount, signIn: acSignIn, setPass: acSetPass, signOut: acSignOut, syncNow: acSyncNow, saveHandle: acSaveHandle, enablePush: acEnablePush, pushAllow, pushLater, install: promptInstall, invite: inviteFriend,
     like: feedLike, comments: openComments, sendComment, delComment, report: reportTrip, feedMode:(m)=>{ feedFilter=m; rerender(); }, feedSp:(s)=>{ feedSpecies=(s&&s!==feedSpecies)?s:null; loadFeed(); }, where: openWhere,
     leaderPeriod:(p)=>{ leaderPeriod=p; const box=$('leadBox'); if(box && _feedCache) box.outerHTML=leaderBoxHTML(_feedCache); },
