@@ -271,27 +271,33 @@ function renderMap(){
   const center = ST.city ? {lat:ST.city.lat, lon:ST.city.lon} : {lat:55.75, lon:37.62};
   setTimeout(async ()=>{
     await MapView.initMap('mapEl', center, places, (la,lo)=>Z.mapPick(la,lo), ST.mapView);
-    if(cloudEnabled() && mapShowCatches){
+    if(cloudEnabled()){
       try{ const items=await getFeed();
-        MapView.drawCatches(items.filter(t=>t.lat!=null&&t.lon!=null).map(t=>({
+        if(mapShowCatches) MapView.drawCatches(items.filter(t=>t.lat!=null&&t.lon!=null).map(t=>({
           lat:t.lat, lon:t.lon, water_name:t.water_name,
           label:(t.fish||[]).filter(f=>f&&f.species).map(f=>{ const b=byId(f.species); return (b?b.n:f.species)+(f.weight?' '+fmtW(f.weight):''); }).join(', ')
         })));
+        const sl=$('spotsList'); if(sl) sl.innerHTML=spotsHTML(getPlaces()); // обогатить «рядом ловят»
       }catch(e){}
     }
   }, 30);
-  const spots = places.length ? places.map((p,i)=>`<div class="spot"><span class="sp-pin"></span>
-      <div class="sp-i"><b>${esc(p.name)}</b>${p.depth?`<div class="dn">🌊 ${esc(p.depth)}</div>`:''}<div class="mt">${p.note?esc(p.note):'сохранённое место'}</div></div>
-      <button class="rm" style="background:none;border:none;color:var(--bad);font-size:16px;cursor:pointer" onclick="Z.delPlace(${i})">✕</button></div>`).join('')
-    : `<div class="empty"><div class="ei">📍</div><p>Пока нет отмеченных мест. Нажми на карту выше, чтобы поставить точку (можно из дома), или кнопку ниже.</p></div>`;
-
   return `<div class="pad"><div class="mast"><span class="t">Мои места</span><span class="d">${places.length} точек</span></div>
     <div class="mtoggle"><button class="${ST.mapView==='satellite'?'on':''}" onclick="Z.mapView('satellite')">Спутник</button><button class="${ST.mapView!=='satellite'?'on':''}" onclick="Z.mapView('scheme')">Схема</button></div>
     <div id="mapEl" style="height:300px;margin-top:8px;border:1px solid var(--rule);background:#dfe6e0;z-index:0"></div>
     ${cloudEnabled()?`<label class="pub-toggle" style="margin:8px 0 0"><input type="checkbox" ${mapShowCatches?'checked':''} onchange="Z.mapCatches(this.checked)"><span>🎣 Показывать уловы рыбаков на карте</span></label>`:''}
     <p style="font-size:11.5px;color:var(--slate);margin-top:6px">📍 Нажми на карту, чтобы поставить метку места — хоть из дома.</p>
-    ${spots}
+    <div id="spotsList">${spotsHTML(places)}</div>
     <button class="act" onclick="Z.newPlace()">＋ Добавить по геолокации</button><div style="height:10px"></div></div>`;
+}
+function spotsHTML(places){
+  if(!places.length) return `<div class="empty"><div class="ei">📍</div><p>Пока нет отмеченных мест. Нажми на карту выше, чтобы поставить точку (можно из дома), или кнопку ниже.</p></div>`;
+  return places.map((p,i)=>{
+    const near = (_feedCache && p.lat!=null) ? nearbyCatches(_feedCache, p.lat, p.lon, 25).slice(0,3) : [];
+    const nearTxt = near.length ? `<div class="sp-catch">🎣 рядом ловят: ${near.map(x=>{const f=byId(x.species);return (f?f.n:esc(x.species))+' ·'+x.count;}).join(', ')}</div>` : '';
+    return `<div class="spot"><span class="sp-pin"></span>
+      <div class="sp-i"><b>${esc(p.name)}</b>${p.depth?`<div class="dn">🌊 ${esc(p.depth)}</div>`:''}<div class="mt">${p.note?esc(p.note):'сохранённое место'}</div>${nearTxt}</div>
+      <button class="rm" style="background:none;border:none;color:var(--bad);font-size:16px;cursor:pointer" onclick="Z.delPlace(${i})">✕</button></div>`;
+  }).join('');
 }
 
 // ── ЭКРАН: СНАСТИ ────────────────────────────────────────────────────────────
