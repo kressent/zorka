@@ -37,7 +37,10 @@ export async function initMap(elId, center, places, onPick, layer) {
       { maxZoom: 19, attribution: '© OpenStreetMap' });
     _base.sat = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
       { maxZoom: 19, attribution: '© Esri' });
-    (layer === 'scheme' ? _base.osm : _base.sat).addTo(_map);
+    // подписи (населённые пункты, вода) поверх спутника — гибрид
+    _base.labels = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}',
+      { maxZoom: 19 });
+    applyBase(layer);
     _spotLayer = L.layerGroup().addTo(_map);
     _catchLayer = L.layerGroup().addTo(_map);
     drawSpots(L, places);
@@ -51,6 +54,14 @@ export async function initMap(elId, center, places, onPick, layer) {
     el.innerHTML = '<div class="empty" style="min-height:auto;padding:2rem 1rem"><div class="ei">🗺</div>'
       + '<p>Карта не загрузилась (нет сети?). Обнови страницу. Места ниже всё равно на месте.</p></div>';
   }
+}
+
+// применить базовый слой: схема = OSM; спутник = снимок + подписи (гибрид)
+function applyBase(which) {
+  if (!_map) return;
+  [_base.osm, _base.sat, _base.labels].forEach(l => { if (l && _map.hasLayer(l)) _map.removeLayer(l); });
+  if (which === 'scheme') { _base.osm.addTo(_map); }
+  else { _base.sat.addTo(_map); if (_base.labels) _base.labels.addTo(_map); }
 }
 
 function drawSpots(L, places) {
@@ -88,22 +99,25 @@ export async function initPicker(elId, center, onPick, layer) {
     if (_pmap.attributionControl) _pmap.attributionControl.setPrefix(false);
     const osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '© OpenStreetMap' });
     const sat = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxZoom: 19, attribution: '© Esri' });
-    (layer === 'scheme' ? osm : sat).addTo(_pmap);
+    const labels = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}', { maxZoom: 19 });
+    if (layer === 'scheme') { osm.addTo(_pmap); } else { sat.addTo(_pmap); labels.addTo(_pmap); }
     let pin = null;
-    _pmap.on('click', (e) => {
-      if (pin) _pmap.removeLayer(pin);
-      pin = L.circleMarker([e.latlng.lat, e.latlng.lng], { radius: 8, color: '#C58A2E', fillColor: '#C58A2E', fillOpacity: .9, weight: 2 }).addTo(_pmap);
-      if (onPick) onPick(e.latlng.lat, e.latlng.lng);
-    });
+    _ppin = (la, lo) => { if (pin) _pmap.removeLayer(pin); pin = L.circleMarker([la, lo], { radius: 8, color: '#C58A2E', fillColor: '#C58A2E', fillOpacity: .9, weight: 2 }).addTo(_pmap); };
+    _pmap.on('click', (e) => { _ppin(e.latlng.lat, e.latlng.lng); if (onPick) onPick(e.latlng.lat, e.latlng.lng); });
     setTimeout(() => { try { _pmap.invalidateSize(); } catch (e) {} }, 250);
   } catch (e) {
     el.innerHTML = '<div class="empty" style="min-height:auto;padding:1rem 0.5rem"><p>Карта не загрузилась (нет сети?). Найди место поиском выше.</p></div>';
   }
 }
-export function destroyPicker() { if (_pmap) { try { _pmap.remove(); } catch (e) {} _pmap = null; } }
+let _ppin = null;
+// перевести пикер на точку (после поиска места) + поставить метку
+export function panPicker(lat, lon, zoom) {
+  if (!_pmap) return;
+  try { _pmap.setView([lat, lon], zoom || 13); if (_ppin) _ppin(lat, lon); } catch (e) {}
+}
+export function destroyPicker() { if (_pmap) { try { _pmap.remove(); } catch (e) {} _pmap = null; _ppin = null; } }
 
 export function setLayer(which) {
   if (!_map || !_base.osm) return;
-  if (which === 'satellite') { _map.removeLayer(_base.osm); _base.sat.addTo(_map); }
-  else { _map.removeLayer(_base.sat); _base.osm.addTo(_map); }
+  applyBase(which === 'scheme' ? 'scheme' : 'sat');
 }

@@ -887,7 +887,9 @@ function pickEntryLoc(){
   if(!draft) return; syncEntryFields();
   const center = (draft.lat!=null) ? {lat:draft.lat,lon:draft.lon} : (ST.city?{lat:ST.city.lat,lon:ST.city.lon}:{lat:54,lon:56});
   openModal(`<h3>Место рыбалки на карте</h3>
-    <p style="font-size:12.5px;color:var(--slate);margin:2px 0 8px">Тапни точку, где ловил — заводь, перекат, яма. Потом «Готово».</p>
+    <p style="font-size:12.5px;color:var(--slate);margin:2px 0 8px">Найди село/реку в поиске и/или тапни точку (заводь, перекат, яма). Потом «Готово».</p>
+    <div class="field"><input id="entrySearch" placeholder="Село, река, ориентир…" oninput="Z.entryLocSearch(this.value)" autocomplete="off"></div>
+    <div id="entrySearchRes" style="margin-bottom:8px"></div>
     <div id="entryMap" style="height:300px;border:1px solid var(--rule);background:#dfe6e0;z-index:0"></div>
     <p id="entryLocLbl" style="font-size:12px;color:var(--slate);margin-top:8px">${draft.lat!=null?`Точка: ${draft.lat.toFixed(4)}, ${draft.lon.toFixed(4)}`:'Точка не выбрана'}</p>
     <button class="act" onclick="Z.entryBack()">← Готово, назад к записи</button>
@@ -896,6 +898,26 @@ function pickEntryLoc(){
 }
 function entryBack(){ renderEntry(); }
 function clearEntryLoc(){ if(draft){ draft.lat=null; draft.lon=null; } renderEntry(); }
+let entrySearchTimer=null;
+function entryLocSearch(q){
+  const box=$('entrySearchRes'); if(!box) return;
+  clearTimeout(entrySearchTimer);
+  if(String(q||'').trim().length<2){ box.innerHTML=''; return; }
+  entrySearchTimer=setTimeout(async ()=>{
+    const inp=$('entrySearch'); if(inp && inp.value.trim()!==String(q).trim()) return;
+    const res=await geoSearch(q);
+    const inp2=$('entrySearch'); if(inp2 && inp2.value.trim()!==String(q).trim()) return;
+    const b=$('entrySearchRes'); if(!b) return;
+    b.innerHTML = res.slice(0,5).map(c=>`<div class="city-item" onclick="Z.entryLocGo(${c.lat},${c.lon})"><span>${esc(c.n)}</span><span class="city-sub">${esc(c.c||'')}</span></div>`).join('')
+      || '<p style="font-size:12px;color:var(--slate);padding:6px 2px">Не нашлось — тапни точку прямо на карте.</p>';
+  }, 550);
+}
+function entryLocGo(lat,lon){
+  if(draft){ draft.lat=+lat; draft.lon=+lon; }
+  MapView.panPicker(+lat,+lon,13);
+  const el=$('entryLocLbl'); if(el) el.textContent='Точка: '+Number(lat).toFixed(4)+', '+Number(lon).toFixed(4);
+  const b=$('entrySearchRes'); if(b) b.innerHTML=''; const inp=$('entrySearch'); if(inp) inp.value='';
+}
 function setDate(v){
   if(!v || !draft) return; syncEntryFields();
   const ex = Diary.entryByDate(v);
@@ -1023,7 +1045,7 @@ export function initUI(){
     openCity, searchCity, pickCity, cityPick, geo, closeModal, openNotif, shareForecast, onboardDone, openMoon, openDay, reportWater, clearNotifs,
     openAccount, signIn: acSignIn, setPass: acSetPass, signOut: acSignOut, syncNow: acSyncNow, saveHandle: acSaveHandle, enablePush: acEnablePush, install: promptInstall,
     like: feedLike, comments: openComments, sendComment, delComment, feedMode:(m)=>{ feedFilter=m; rerender(); }, feedSp:(s)=>{ feedSpecies=(s&&s!==feedSpecies)?s:null; loadFeed(); }, where: openWhere,
-    newEntry, editEntry, addCatch, rmCatch, setW, setLure, lureCustom, setRating, setPrivate, setDate, pickEntryLoc, entryBack, clearEntryLoc, saveEntry, delEntry, shareCatch, openRecords, exportDiary, importDiary,
+    newEntry, editEntry, addCatch, rmCatch, setW, setLure, lureCustom, setRating, setPrivate, setDate, pickEntryLoc, entryBack, clearEntryLoc, entryLocSearch, entryLocGo, saveEntry, delEntry, shareCatch, openRecords, exportDiary, importDiary,
     newKit, editKit, kitIcon, kitTarget, addLure, lureQty, rmLure, saveKit, delKit,
     mapView:(v)=>{ ST.mapView=v; MapView.setLayer(v); document.querySelectorAll('.mtoggle button').forEach((b,i)=>b.classList.toggle('on',(i===0)===(v==='satellite'))); },
     mapPick:(la,lo)=>newPlace({lat:la,lon:lo}), newPlace, placeGeo, savePlace, delPlace, mapCatches:(v)=>{ mapShowCatches=!!v; rerender(); },
