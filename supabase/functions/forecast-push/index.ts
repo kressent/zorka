@@ -74,7 +74,18 @@ Deno.serve(async () => {
       const alert = goodDayAlert(fc.upcoming, fc.day.score, { minScore: 4.2, horizon: 2 });
       if (!alert) continue;
 
-      const body = JSON.stringify({ title: '🔥 Скоро отличный клёв', body: alert.body, url: './' });
+      // добавим лучшие часы того дня (считаем прогноз на дату сильного дня)
+      let windowTxt = '';
+      try {
+        const date = String(alert.id).replace('goodday-', '');
+        const di = data.daily.time.indexOf(date);
+        if (di >= 0) {
+          const fc2 = computeForecast(data, { todayIdx: di, lat: la, lon: lo });
+          if (fc2.bestWindows && fc2.bestWindows[0]) windowTxt = ' Лучшие часы: ' + fc2.bestWindows.slice(0, 2).join(', ') + '.';
+        }
+      } catch { /* окно не критично */ }
+
+      const body = JSON.stringify({ title: '🔥 Скоро отличный клёв', body: alert.body + windowTxt, url: './' });
       for (const s of list) {
         try {
           await webpush.sendNotification({ endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } }, body);

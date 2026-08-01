@@ -284,6 +284,8 @@ button{font-family:inherit}
 .sp-catch{font-size:11.5px;color:var(--jade);margin-top:3px}
 .cl-lure{color:var(--jade);font-size:12px;font-family:var(--font-mono)}
 .tg.real{border-color:var(--brass);color:var(--brass)}
+.tg.buy{border-color:var(--jade);color:var(--jade);text-decoration:none;font-weight:700}
+.tg.buy:hover{background:var(--jade);color:var(--paper)}
 .tg.real b{color:var(--ink)}
 .lbl-sub{text-transform:none;font-weight:400;color:var(--slate);font-family:var(--font-serif);font-style:italic}
 /* профиль водоёма */

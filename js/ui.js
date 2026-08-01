@@ -27,7 +27,7 @@ import { nearbySignal, calibrate } from './calibrate.js';
 import { personalRecords, fishingYear } from './records.js';
 import { achievements } from './achievements.js';
 import { forecastPost } from './postgen.js';
-import { cloudEnabled } from './config.js';
+import { cloudEnabled, CONFIG } from './config.js';
 
 // ── помощники ────────────────────────────────────────────────────────────────
 const $ = (id) => document.getElementById(id);
@@ -493,6 +493,15 @@ function openConfidence(){
     ${why}
     <p style="font-size:12px;color:var(--slate);margin-top:12px">Чем дольше рыбаки ведут дневники, тем точнее прогноз — модель будет учиться на реальных уловах.</p>`);
 }
+// позвать друга — рост через сарафан (Web Share / копирование ссылки)
+async function inviteFriend(){
+  const url='https://kressent.github.io/zorka/';
+  const text='🎣 «На крючке» — прогноз клёва, дневник рыбалок и карта мест. Что клюёт сегодня и на что, по погоде/давлению/луне. Бесплатно, ставить ничего не надо:';
+  try{ if(navigator.share){ await navigator.share({ title:'На крючке — прогноз клёва', text, url }); return; } }
+  catch(e){ if(e&&e.name==='AbortError') return; }
+  try{ await navigator.clipboard.writeText(text+' '+url); toast('Приглашение скопировано — вставь другу 📋'); }
+  catch(e){ toast('Ссылка: '+url); }
+}
 async function shareForecast(){
   if(!(ST.weather && ST.city)) return;
   let text='';
@@ -593,10 +602,17 @@ function importDiary(){
   inp.click();
 }
 function kitHintHTML(id){ const k=Tackle.kitForSpecies(id); return k?`<div class="lbl">🎒 Твой комплект</div><div class="tag-row"><span class="tg" style="border-color:var(--jade);color:var(--jade)">${esc(k.icon||'🎣')} ${esc(k.name)}</span></div>`:''; }
+// affiliate-ссылка «купить приманку» — показывается, только если задан партнёр в CONFIG
+function affLink(query){
+  const a = CONFIG.AFFILIATE;
+  if(!a || !a.enabled || !a.url) return '';
+  const url = a.url.replace('{q}', encodeURIComponent(query));
+  return `<a class="tg buy" href="${esc(url)}" target="_blank" rel="noopener nofollow" onclick="event.stopPropagation()">🛒 ${esc(a.label||'Купить')}</a>`;
+}
 function realLureHTML(species){
   const top = topLures(LURE_STATS, species, 3);
   if(!top.length) return '';
-  const chips = top.map(l=>`<span class="tg real">${esc(l.lure)} <b>·${l.n}</b></span>`).join('');
+  const chips = top.map(l=>`<span class="tg real">${esc(l.lure)} <b>·${l.n}</b></span>${affLink(l.lure+' рыболовная приманка')}`).join('');
   return `<div class="lbl">🔥 Реально берут на <span class="lbl-sub">(по уловам рыбаков)</span></div><div class="tag-row">${chips}</div>`;
 }
 
@@ -651,7 +667,7 @@ async function loadFeed(){
     box.innerHTML = lead + spChips + (list.length ? list.map(it=>feedCard(it, liked.has(it.id), me)).join('') : feedEmpty('Нет уловов по этому фильтру.'));
   }catch(e){ box.innerHTML=feedEmpty('Не удалось загрузить ленту. '+(e.message||'')); }
 }
-function feedEmpty(msg){ return `<div class="empty"><div class="ei">🎣</div><p>${esc(msg)}</p></div>`; }
+function feedEmpty(msg){ return `<div class="empty"><div class="ei">🎣</div><p>${esc(msg)}</p><button class="act" style="max-width:260px;border-color:var(--jade);color:var(--jade);margin:10px auto 0" onclick="Z.invite()">🎣 Позвать друзей — вместе интереснее</button></div>`; }
 // одна карточка = один выезд (рыбалка) со списком рыбы
 function feedCard(it, mine, myId){
   const d=it.caught_at?new Date(it.caught_at):null;
@@ -856,6 +872,7 @@ async function openAccount(){
       <div class="field" style="margin-top:14px"><label>Ник в ленте — как тебя видят другие рыбаки</label>
         <input id="ac_handle" maxlength="24" value="${esc(handle)}" placeholder="напр. Щукарь52"></div>
       <button class="act" onclick="Z.saveHandle()">Сохранить ник</button>
+      <button class="act" style="border-color:var(--jade);color:var(--jade);margin-top:10px" onclick="Z.invite()">🎣 Позвать друга на рыбалку</button>
       <button class="act" style="border-color:var(--brass);color:var(--brass);margin-top:10px" onclick="Z.install()">📲 Установить на телефон</button>
       <details class="acc-more"><summary>Аккаунт и синхронизация</summary>
         <p style="font-size:13px;margin-top:8px">Вход выполнен: <b>${esc(user.email||'')}</b></p>
@@ -1218,7 +1235,7 @@ export function initUI(){
     filter:(f)=>{ ST.filter=f; saveSettings(); rerender(); },
     tf:(el)=>el.classList.toggle('open'),
     openCity, searchCity, pickCity, cityPick, geo, closeModal, openNotif, shareForecast, onboardDone, openMoon, openDay, openConfidence, reportWater, clearNotifs, openWaters,
-    openAccount, signIn: acSignIn, setPass: acSetPass, signOut: acSignOut, syncNow: acSyncNow, saveHandle: acSaveHandle, enablePush: acEnablePush, pushAllow, pushLater, install: promptInstall,
+    openAccount, signIn: acSignIn, setPass: acSetPass, signOut: acSignOut, syncNow: acSyncNow, saveHandle: acSaveHandle, enablePush: acEnablePush, pushAllow, pushLater, install: promptInstall, invite: inviteFriend,
     like: feedLike, comments: openComments, sendComment, delComment, report: reportTrip, feedMode:(m)=>{ feedFilter=m; rerender(); }, feedSp:(s)=>{ feedSpecies=(s&&s!==feedSpecies)?s:null; loadFeed(); }, where: openWhere,
     leaderPeriod:(p)=>{ leaderPeriod=p; const box=$('leadBox'); if(box && _feedCache) box.outerHTML=leaderBoxHTML(_feedCache); },
     waterProfile: openWaterProfile,
