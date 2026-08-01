@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>На крючке — флаер</title>
+<style>
+  :root{--paper:#EFE9DB;--card:#F4EFE3;--ink:#10322D;--jade:#2C6E5A;--brass:#C58A2E;--slate:#5C6E64;--line:#D8CFBA;
+    --serif:Georgia,"Times New Roman",serif;--mono:ui-monospace,"SF Mono",Menlo,monospace;--sans:"Segoe UI",system-ui,sans-serif}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:#cbc4b2;font-family:var(--sans);color:var(--ink);padding:20px;display:flex;flex-direction:column;align-items:center;gap:16px}
+  .hint{max-width:520px;font-size:13px;color:#333;background:#fff;border:1px solid #bbb;padding:12px 14px;border-radius:6px}
+  .hint b{color:#000}
+  /* Флаер A6 (105×148мм) — печатать по 4 на A4 */
+  .flyer{width:105mm;height:148mm;background:var(--paper);color:var(--ink);position:relative;
+    padding:12mm 10mm;display:flex;flex-direction:column;
+    background-image:radial-gradient(120% 55% at 50% 0%,rgba(44,110,90,.14),transparent 60%);
+    box-shadow:0 4px 20px rgba(0,0,0,.25)}
+  .flyer::before{content:"";position:absolute;inset:5mm;border:1.5px solid var(--ink)}
+  .flyer::after{content:"";position:absolute;inset:6.5mm;border:1px solid var(--brass)}
+  .in{position:relative;z-index:1;display:flex;flex-direction:column;height:100%;text-align:center}
+  .brand{font-family:var(--mono);font-size:10px;letter-spacing:.28em;color:var(--brass);font-weight:700;margin-top:2mm}
+  h1{font-family:var(--serif);font-size:30px;line-height:1.05;margin:3mm 0 1mm;font-weight:700}
+  .sub{font-family:var(--serif);font-style:italic;font-size:14px;color:var(--slate);margin-bottom:4mm}
+  .pitch{font-size:12.5px;line-height:1.5;text-align:left;margin:0 auto 4mm;max-width:80mm}
+  .pitch li{margin:2mm 0;list-style:none;padding-left:6mm;position:relative}
+  .pitch li::before{content:"🎣";position:absolute;left:0;top:-1px;font-size:12px}
+  .qr-wrap{margin:auto auto 3mm;display:flex;flex-direction:column;align-items:center;gap:2mm}
+  .qr{width:38mm;height:38mm;border:1.5px dashed var(--slate);display:flex;align-items:center;justify-content:center;
+    text-align:center;font-family:var(--mono);font-size:9px;color:var(--slate);line-height:1.4;padding:3mm;background:#fff}
+  .qr img{width:100%;height:100%;object-fit:contain}
+  .url{font-family:var(--mono);font-size:13px;font-weight:700;color:var(--jade);letter-spacing:.01em}
+  .foot{font-family:var(--serif);font-style:italic;font-size:12px;color:var(--slate);margin-top:2mm}
+  @media print{
+    body{background:#fff;padding:0;gap:0}
+    .hint{display:none}
+    .flyer{box-shadow:none;page-break-after:always}
+    @page{margin:8mm}
+  }
+</style>
+</head>
+<body>
+
+  <div class="hint">
+    <b>Как сделать флаер:</b> 1) Сгенерируй QR для ссылки
+    <b>kressent.github.io/zorka</b> на любом бесплатном сервисе (qr-code.ru, qrcoder.ru) →
+    сохрани картинку. 2) Замени пунктирный квадрат ниже: вставь <code>&lt;img src="qr.png"&gt;</code>
+    внутрь <code>.qr</code> (или просто вклей QR в распечатанный флаер). 3) Печать: Ctrl+P →
+    формат A6, или размести 4 копии на A4. <b>Этот блок при печати скрывается.</b>
+  </div>
+
+  <div class="flyer">
+    <div class="in">
+      <div class="brand">ПРОГНОЗ КЛЁВА · ДНЕВНИК · КАРТА</div>
+      <h1>На крючке</h1>
+      <div class="sub">знай, когда клюёт</div>
+
+      <ul class="pitch">
+        <li>Что клюёт <b>сегодня</b> и на что — по погоде, давлению, луне и воде</li>
+        <li>Лучшие часы и окна клёва на твой водоём</li>
+        <li>Дневник уловов, карта мест, «что реально ловят рядом»</li>
+        <li>Бесплатно, работает офлайн, ставить ничего не надо</li>
+      </ul>
+
+      <div class="qr-wrap">
+        <div class="qr">СЮДА<br>QR-код на<br>kressent.github.io/zorka</div>
+        <div class="url">kressent.github.io/zorka</div>
+      </div>
+
+      <div class="foot">Наведи камеру телефона — и лови 🐟</div>
+    </div>
+  </div>
+
+</body>
+</html>
