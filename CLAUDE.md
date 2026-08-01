@@ -86,8 +86,14 @@ Netlify, `localStorage`). Отсюда перенесены «мозги» (ба
   в отдельный модуль и покрывать node-тестом (браузерные API там недоступны).
 - Ключевые модули: `data.js` (виды + трофей-пороги), `score.js` (движок), `astro.js`,
   `weather.js` (Open-Meteo), `diary.js`, `tackle.js`, `locations.js`, `ui.js`, `app.js`;
-  облако/сообщество: `cloud.js` (Supabase), `sync.js`, `mapview.js` (Leaflet),
-  `leaderboard.js` (Улов недели), `engagement.js` (уведомления), `catchcard.js`, `notify.js`.
+  облако/сообщество: `cloud.js` (Supabase), `sync.js`, `mapview.js` (Leaflet: карта +
+  пикер, гибрид-спутник с подписями), `catchcard.js`, `notify.js`.
+- Чистые модули (все с node-тестами): `leaderboard.js` (Улов недели), `engagement.js`
+  (уведомления о лайках/коммент.), `lurestats.js` (рейтинг приманок), `forecastAlert.js`
+  (скоро жор), `geo.js` (haversine, лента «рядом»), `water.js` (сводка отметок воды),
+  `records.js`/`achievements.js` (рекорды/бейджи), `nearby.js` (что ловят рядом / где
+  ловится вид), `waterbodies.js` (кластеризация уловов в водоёмы). Локация — `locations.js`
+  (геокодинг Nominatim/OSM: поиск сёл + reverse-geocode).
 - **SW:** network-first + `cache:'reload'` (всегда свежий код). При добавлении нового
   `js/*.js` — вписать в `SHELL` в `sw.js` и поднять `VERSION`.
 

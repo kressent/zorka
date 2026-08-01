@@ -22,6 +22,7 @@ import { goodDayAlert } from './forecastAlert.js';
 import { sortByNear } from './geo.js';
 import { summarizeWater, WATER_STATES } from './water.js';
 import { nearbyCatches, whereSpecies } from './nearby.js';
+import { clusterWaters } from './waterbodies.js';
 import { personalRecords } from './records.js';
 import { achievements } from './achievements.js';
 import { forecastPost } from './postgen.js';
@@ -101,7 +102,7 @@ export async function loadWeather(){
       const a=goodDayAlert(fc.upcoming, fc.day.score); if(a){ Notify.addNotif(a); rerender(); }
     }catch(e){}
     if(cloudEnabled() && !WATER_REPORTS.length) setTimeout(loadWaterReports, 300);
-    if(cloudEnabled() && !NEARBY_TRIPS.length) setTimeout(loadNearby, 500);
+    if(cloudEnabled() && !_feedCache) setTimeout(loadNearby, 500);
   }catch(e){
     main.innerHTML = `<div class="center"><div class="ic">📡</div><h2>Нет связи</h2><p>Не удалось загрузить погоду и нет сохранённой копии.</p><button class="act" style="max-width:220px" onclick="Z.reload()">Повторить</button></div>`;
     $('tabbar').innerHTML=navHTML();
@@ -197,6 +198,7 @@ function renderForecast(){
       ${fishHTML || '<p style="color:var(--slate);font-size:13px;margin-top:10px">Нет выбранных видов.</p>'}
       <div class="adv">${esc(fc.advice)}</div>
       ${nearbyHTML()}
+      ${(cloudEnabled() && _feedCache && _feedCache.length) ? `<button class="act" style="padding:8px;font-size:12.5px;border-color:var(--jade);color:var(--jade)" onclick="Z.openWaters()">🌊 Все водоёмы (что где ловится) →</button>` : ''}
       ${waterReportHTML()}
       <div class="lbl" style="margin-top:8px">Прогноз на 2 недели</div>
       ${(fc.bestDay && fc.bestDay.name!=='Сегодня') ? `<div onclick="Z.openDay('${fc.bestDay.date||''}')" style="cursor:pointer;font-family:var(--font-serif);font-size:13.5px;color:var(--jade);margin:8px 0 2px">🏆 Лучший день — <b>${esc(fc.bestDay.name)}</b> · ${fc.bestDay.score.toFixed(1)}/5 ▸</div>` : `<div style="font-size:12.5px;color:var(--slate);margin:8px 0 2px">🏆 Лучший день — сегодня</div>`}
@@ -362,22 +364,31 @@ async function reportWater(state){
   catch(e){ toast('Не удалось: '+(e.message||e)); }
 }
 
-// ── «что ловят рядом» (маховик по месту) ──
-let NEARBY_TRIPS = [];
-async function loadNearby(){ if(!cloudEnabled()) return; try{ NEARBY_TRIPS=await getFeed(); rerender(); }catch(e){} }
+// ── «что ловят рядом» (маховик по месту) — читает общий кэш ленты _feedCache ──
+async function loadNearby(){ if(!cloudEnabled()) return; try{ await getFeed(); rerender(); }catch(e){} }
 function nearbyHTML(){
   if(!cloudEnabled() || !ST.city) return '';
-  const list = nearbyCatches(NEARBY_TRIPS, ST.city.lat, ST.city.lon, 60).slice(0,6);
+  const list = nearbyCatches(_feedCache||[], ST.city.lat, ST.city.lon, 60).slice(0,6);
   if(!list.length) return '';
   const rows = list.map(x=>{ const f=byId(x.species); const nm=f?f.n:esc(x.species); const col=f?f.col:'#7c8a80';
     return `<div class="nb-row" onclick="Z.where('${x.species}')" style="cursor:pointer"><span class="dot" style="background:${col}"></span><b class="nb-n">${nm}</b><span class="nb-c">${x.count} ${x.count===1?'улов':(x.count<5?'улова':'уловов')}</span>${x.topLure?`<span class="nb-lr">на ${esc(x.topLure)}</span>`:''}<span class="chev">▸</span></div>`; }).join('');
   return `<div class="lbl" style="margin-top:16px">🎣 Здесь реально ловят <span class="lbl-sub">(тапни вид → где его ловят)</span></div><div class="nb-list">${rows}</div>`;
 }
 
+function openWaters(){
+  const list = clusterWaters(_feedCache||[]);
+  const rows = list.slice(0,25).map(w=>{
+    const sp = w.species.slice(0,4).map(s=>{ const f=byId(s.species); return (f?f.n:esc(s.species))+' ·'+s.count; }).join(', ');
+    return `<div class="where-row"><div class="wr-place"><b>${esc(w.name)}</b><span class="wr-km">${w.count} ${w.count<5?'улова':'уловов'}</span></div><div class="wr-meta">${sp||'—'}</div></div>`;
+  }).join('');
+  openModal(`<h3>🌊 Водоёмы — по уловам рыбаков</h3>
+    <p style="font-size:12px;color:var(--slate);margin:2px 0 10px">Где что ловится, по реальным уловам сообщества. Чем больше рыбаков — тем полнее список.</p>
+    ${rows || '<p style="color:var(--slate);font-size:13px">Пока уловов мало. Список наполнится, когда рыбаки начнут вести дневники 🎣</p>'}`);
+}
 function openWhere(species){
   const f=byId(species); const nm=f?f.n:esc(species);
   const lat=ST.city?ST.city.lat:null, lon=ST.city?ST.city.lon:null;
-  const list = whereSpecies(NEARBY_TRIPS, species, lat, lon, 300).slice(0,15);
+  const list = whereSpecies(_feedCache||[], species, lat, lon, 300).slice(0,15);
   const rows = list.length ? list.map(x=>{
     const d=x.caught_at?new Date(x.caught_at):null; const dl=d?`${d.getDate()} ${MONTHS_GEN[d.getMonth()]}`:'';
     return `<div class="where-row"><div class="wr-place"><b>${x.water_name?esc(x.water_name):'Без названия'}</b>${x.km!=null?`<span class="wr-km">~${x.km} км</span>`:''}</div><div class="wr-meta">${x.weight?fmtW(x.weight)+' · ':''}${x.lure?'на '+esc(x.lure)+' · ':''}${dl}</div></div>`;
@@ -658,6 +669,8 @@ function onCommunityChange(){
     invalidateFeed();                                // данные изменились → кэш устарел
     if(cmTrip && $('cmList')) refreshComments();     // открыта модалка → обновить (она же освежит ленту)
     else if(ST.tab==='feed') loadFeed();             // видна лента → обновить счётчики
+    else if(ST.tab==='forecast') loadNearby();       // «здесь ловят» → освежить
+    else if(ST.tab==='map') rerender();              // карта уловов → перерисовать
     checkEngagement();                               // живой колокольчик
   }, 700);
 }
@@ -953,7 +966,7 @@ function saveEntry(){
         draft.forecast={maxT:fc.conditions.maxT,minT:fc.conditions.minT,avgP:fc.conditions.avgP,pdir:fc.conditions.pdir,wt:fc.conditions.wt,score:fc.day.score}; } }catch(e){}
   }
   const saved = draft;
-  Diary.upsertEntry(saved); draft=null; closeModal(); rerender(); Sync.pushSoon();
+  Diary.upsertEntry(saved); draft=null; invalidateFeed(); closeModal(); rerender(); Sync.pushSoon();
   // синхронизируем ленту: приватный улов — убрать из ленты, обычный — опубликовать
   if(cloudEnabled() && Cloud.cachedUser()){
     if(saved.private){
@@ -1058,7 +1071,7 @@ export function initUI(){
     tab, reload:()=>loadWeather(),
     filter:(f)=>{ ST.filter=f; saveSettings(); rerender(); },
     tf:(el)=>el.classList.toggle('open'),
-    openCity, searchCity, pickCity, cityPick, geo, closeModal, openNotif, shareForecast, onboardDone, openMoon, openDay, reportWater, clearNotifs,
+    openCity, searchCity, pickCity, cityPick, geo, closeModal, openNotif, shareForecast, onboardDone, openMoon, openDay, reportWater, clearNotifs, openWaters,
     openAccount, signIn: acSignIn, setPass: acSetPass, signOut: acSignOut, syncNow: acSyncNow, saveHandle: acSaveHandle, enablePush: acEnablePush, install: promptInstall,
     like: feedLike, comments: openComments, sendComment, delComment, feedMode:(m)=>{ feedFilter=m; rerender(); }, feedSp:(s)=>{ feedSpecies=(s&&s!==feedSpecies)?s:null; loadFeed(); }, where: openWhere,
     newEntry, editEntry, addCatch, rmCatch, setW, setLure, lureCustom, setRating, setPrivate, setDate, pickEntryLoc, entryBack, clearEntryLoc, entryLocSearch, entryLocGo, saveEntry, delEntry, shareCatch, openRecords, exportDiary, importDiary,
