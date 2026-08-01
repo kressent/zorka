@@ -23,6 +23,7 @@ import { sortByNear } from './geo.js';
 import { summarizeWater, WATER_STATES } from './water.js';
 import { nearbyCatches, whereSpecies } from './nearby.js';
 import { clusterWaters, waterProfile } from './waterbodies.js';
+import { nearbySignal, calibrate } from './calibrate.js';
 import { personalRecords, fishingYear } from './records.js';
 import { achievements } from './achievements.js';
 import { forecastPost } from './postgen.js';
@@ -151,15 +152,20 @@ function renderForecast(){
   const bands = fc.windows.map(([a,b])=>`<div class="band" style="left:${a/24*100}%;width:${(b-a)/24*100}%"></div>`).join('');
   const winLabel = fc.bestWindows[0] ? `◆ окно ${fc.bestWindows.join(', ')}` : '◆ ровный день';
 
-  const fishHTML = fc.fish.map(f=>{
+  // калибровка «обучением»: подтверждаем прогноз реальными уловами сообщества рядом
+  const sig = (cloudEnabled() && ST.city) ? nearbySignal(_feedCache||[], ST.city.lat, ST.city.lon, {}) : null;
+  const fishList = sig ? calibrate(fc.fish, sig) : fc.fish;
+  const fishHTML = fishList.map(f=>{
     const lure = f.sc===0 ? (f.factors[0]?f.factors[0].tx:'не клюёт') : f.lr[0];
     const spawn = f.sc===0 && f.factors[0] && f.factors[0].tx.startsWith('нерест');
+    const conf = f.confirmed ? `<span class="conf-near" title="Сообщество реально ловит этот вид рядом">✓ ловят рядом${f.confCount>1?' · '+f.confCount:''}</span>` : '';
     return `<div class="fr" onclick="Z.tf(this)">
         <span class="fd" style="width:9px;height:9px;border-radius:50%;background:${f.col};flex:none"></span>
-        <div class="fn"><b>${f.n}</b><span>${esc(lure)}</span></div>
+        <div class="fn"><b>${f.n}</b><span>${esc(lure)}${conf}</span></div>
         ${bars(f.sc)}<span class="chev">▾</span></div>
       <div class="fbody">
         ${spawn?`<div class="spawn-warn">⚠️ Период нереста — рыба почти не кормится</div>`:''}
+        ${f.confirmed?`<div class="conf-line">🎣 Сообщество подтверждает: <b>${esc(f.n.toLowerCase())}</b> реально ловят рядом${f.confLure?` (ходовая — <b>${esc(f.confLure)}</b>)`:''}. Прогноз учитывает это.</div>`:''}
         ${f.factors.length?`<div class="factors">${f.factors.map(x=>`<span class="ftag ${x.tp}">${esc(x.tx)}</span>`).join('')}</div>`:''}
         <div class="detail-grid"><div class="dg"><div class="k">⏰ Время</div><div class="v">${esc(f.ti)}</div></div>
           <div class="dg"><div class="k">📏 Глубина</div><div class="v">${esc(f.dp)}</div></div></div>

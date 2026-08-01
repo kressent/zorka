@@ -108,6 +108,8 @@ button{font-family:inherit}
 .confbadge.c-low{color:var(--bad);border-color:var(--bad)}
 .c-high{color:var(--jade)} .c-medium{color:var(--brass)} .c-low{color:var(--bad)}
 .conf-why{font-size:12.5px;color:var(--ink);margin:5px 0;line-height:1.4}
+.conf-near{display:inline-block;margin-left:7px;font-family:var(--font-mono);font-size:9.5px;letter-spacing:.02em;color:var(--jade);border:1px solid var(--jade);padding:1px 5px;vertical-align:1px}
+.conf-line{font-size:12.5px;color:var(--jade);background:rgba(44,110,90,.08);border-left:2px solid var(--jade);padding:6px 9px;margin:8px 0;line-height:1.4}
 .detail-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin:8px 0}
 .dg .k{font-family:var(--font-mono);font-size:9px;letter-spacing:.08em;text-transform:uppercase;color:var(--slate)}
 .dg .v{font-size:12.5px}

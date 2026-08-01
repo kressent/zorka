@@ -5,7 +5,7 @@
   "type": "module",
   "description": "На крючке — прогноз клёва, дневник и сообщество рыбаков (РФ/СНГ)",
   "scripts": {
-    "test": "node test/engine.test.js && node test/leaderboard.test.js && node test/engagement.test.js && node test/lurestats.test.js && node test/forecastAlert.test.js && node test/geo.test.js && node test/records.test.js && node test/water.test.js && node test/nearby.test.js && node test/waterbodies.test.js && node test/ui.smoke.test.js",
+    "test": "node test/engine.test.js && node test/leaderboard.test.js && node test/engagement.test.js && node test/lurestats.test.js && node test/forecastAlert.test.js && node test/geo.test.js && node test/records.test.js && node test/water.test.js && node test/nearby.test.js && node test/waterbodies.test.js && node test/calibrate.test.js && node test/ui.smoke.test.js",
     "serve": "node tools/serve.js"
   }
 }
