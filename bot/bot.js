@@ -1,5 +1,5 @@
 'use strict';
-// Telegram-бот «Зорька»: отвечает прогнозом на название города/водоёма.
+// Telegram-бот «На крючке»: отвечает прогнозом на название города/водоёма.
 // Long-polling, без зависимостей. Запуск:  ZORKA_BOT_TOKEN=xxxxx node bot/bot.js
 import { getForecast } from './forecast.js';
 import { forecastPost } from '../js/postgen.js';
@@ -17,7 +17,7 @@ async function reply(chatId, text) {
   });
 }
 
-const HELLO = 'Привет! Я Зорька 🎣\nНапиши город или водоём — дам прогноз клёва на сегодня.\nНапример: «Уфа», «Салават» или «прогноз Казань».';
+const HELLO = 'Привет! Это «На крючке» 🎣\nНапиши город или водоём — дам прогноз клёва на сегодня.\nНапример: «Уфа», «Салават» или «прогноз Казань».';
 
 async function handle(update) {
   const m = update.message;
@@ -39,7 +39,7 @@ async function handle(update) {
 
 async function loop() {
   let offset = 0;
-  console.log('Зорька-бот запущен. Ожидаю сообщения…');
+  console.log('Бот «На крючке» запущен. Ожидаю сообщения…');
   while (true) {
     try {
       const r = await fetch(`${API}/getUpdates?timeout=30&offset=${offset}`);

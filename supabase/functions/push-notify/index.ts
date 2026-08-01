@@ -34,7 +34,7 @@ Deno.serve(async (req) => {
     const isComment = table === 'trip_comments';
     const body = JSON.stringify({
       title: isComment ? '💬 Новый комментарий' : '❤️ Твой улов оценили',
-      body: isComment ? 'Кто-то прокомментировал твой улов в Зорьке 🎣' : 'Твой улов получил лайк 🎣',
+      body: isComment ? 'Кто-то прокомментировал твой улов в «На крючке» 🎣' : 'Твой улов получил лайк 🎣',
       url: './',
     });
 

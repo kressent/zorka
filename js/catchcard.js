@@ -36,7 +36,7 @@ export async function makeCatchCard(entry, cityName) {
   let y = 168;
   setLS(g, 8);
   g.fillStyle = JADE; g.font = `700 40px ${SERIF}`;
-  g.fillText('ЗОРЬКА', cx, y);
+  g.fillText('НА КРЮЧКЕ', cx, y);
   setLS(g, 3);
   g.fillStyle = SLATE; g.font = `600 20px ${SANS}`;
   g.fillText('ПРОГНОЗ КЛЁВА · ДНЕВНИК', cx, y + 32);
@@ -131,7 +131,7 @@ export async function makeCatchCard(entry, cityName) {
 
   // подвал — таглайн
   g.fillStyle = JADE; g.font = `italic 30px ${SERIF}`;
-  g.fillText('Зорька знает, когда клюёт', cx, H - 120);
+  g.fillText('Знай, когда клюёт', cx, H - 120);
 
   return await new Promise(res => c.toBlob(b => res(b), 'image/png'));
 }
@@ -142,7 +142,7 @@ export async function shareCard(blob, filename = 'ulov-zorka.png') {
   try {
     const file = new File([blob], filename, { type: 'image/png' });
     if (navigator.canShare && navigator.canShare({ files: [file] })) {
-      await navigator.share({ files: [file], text: 'Мой улов 🎣 Зорька — прогноз клёва' });
+      await navigator.share({ files: [file], text: 'Мой улов 🎣 На крючке — прогноз клёва' });
       return 'shared';
     }
   } catch (e) { if (e && e.name === 'AbortError') return 'cancelled'; }

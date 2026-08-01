@@ -3,7 +3,7 @@
 // Стратегия: оболочку приложения кэшируем (offline-first), погоду (Open-Meteo)
 // не кэшируем на уровне SW — у приложения свой кэш в localStorage на 3 часа.
 
-const VERSION = 'zorka-v65';
+const VERSION = 'zorka-v66';
 const SHELL = [
   './',
   './index.html',
@@ -55,7 +55,7 @@ self.addEventListener('activate', (e) => {
 self.addEventListener('push', (e) => {
   let d = {};
   try { d = e.data ? e.data.json() : {}; } catch (_) { d = { body: e.data ? e.data.text() : '' }; }
-  const title = d.title || 'Зорька 🎣';
+  const title = d.title || 'На крючке 🎣';
   const opts = {
     body: d.body || '',
     icon: './icons/icon-192.png',

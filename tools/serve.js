@@ -1,4 +1,4 @@
-// Простейший статический сервер для локального запуска Зорьки.
+// Простейший статический сервер для локального запуска «На крючке».
 //   node tools/serve.js   →   http://localhost:8080
 import http from 'node:http';
 import { readFile } from 'node:fs/promises';
@@ -25,4 +25,4 @@ export const server = http.createServer(async (req, res) => {
     res.writeHead(404); res.end('404');
   }
 });
-server.listen(PORT, () => console.log(`Зорька → http://localhost:${PORT}`));
+server.listen(PORT, () => console.log(`На крючке → http://localhost:${PORT}`));

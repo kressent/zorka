@@ -123,7 +123,7 @@ export async function loadWeather(){
   }
 }
 function noCity(){
-  return `<div class="center"><div class="ic">🎣</div><h2>Зорька</h2>
+  return `<div class="center"><div class="ic">🎣</div><h2>На крючке</h2>
     <p>Выбери водоём или город — покажу прогноз клёва, погоду и лучшие часы.</p>
     <button class="act" style="max-width:240px" onclick="Z.openCity()">Выбрать место</button>
     <button class="act" style="max-width:240px;border-color:var(--jade);color:var(--jade)" onclick="Z.geo()">📍 По геолокации</button></div>`;
@@ -492,7 +492,7 @@ function openRecords(){
 }
 function exportDiary(){
   try{
-    const data = { app:'Зорька', version:1, exported:new Date().toISOString(),
+    const data = { app:'На крючке', version:1, exported:new Date().toISOString(),
       entries:Diary.getEntries(), places:getPlaces(), kits:Tackle.getKits() };
     const blob = new Blob([JSON.stringify(data,null,2)], {type:'application/json'});
     const url = URL.createObjectURL(blob);
@@ -507,7 +507,7 @@ function importDiary(){
     const r=new FileReader();
     r.onload=()=>{ try{
       const d=JSON.parse(r.result);
-      if(!d || !Array.isArray(d.entries)) throw new Error('это не файл дневника Зорьки');
+      if(!d || !Array.isArray(d.entries)) throw new Error('это не файл дневника «На крючке»');
       if(!confirm('Восстановить дневник из файла? Текущие записи, места и снасти будут заменены.')) return;
       Diary.replaceEntries(d.entries);
       if(Array.isArray(d.places)) savePlaces(d.places);
@@ -706,7 +706,7 @@ function closeModal(){ const m=$('modal'); if(m) m.remove(); try{ MapView.destro
 // онбординг первого запуска
 function maybeOnboard(){
   try{ if(localStorage.getItem('zorka_onboarded')) return; }catch(e){ return; }
-  openModal(`<h3>🎣 Добро пожаловать в Зорьку!</h3>
+  openModal(`<h3>🎣 Добро пожаловать в «На крючке»!</h3>
     <div class="onb">
       <div class="onb-row"><span class="onb-i">🌅</span><div class="onb-t"><b>Прогноз клёва</b><p>Каждый день — что клюёт, когда и на что. По погоде, давлению, луне и воде.</p></div></div>
       <div class="onb-row"><span class="onb-i">📖</span><div class="onb-t"><b>Дневник</b><p>Записывай уловы — это твоя летопись, и она уточняет прогноз лично для тебя.</p></div></div>
