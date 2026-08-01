@@ -13,6 +13,10 @@ const DEFS = [
   { id: 'trophy1', icon: '🏆', name: 'Трофей',                   need: 1,   of: r => r.trophies },
   { id: 'trophy5', icon: '👑', name: 'Коллекция трофеев · 5',    need: 5,   of: r => r.trophies },
   { id: 'days10',  icon: '📅', name: 'Постоянство · 10 дней',    need: 10,  of: r => r.days },
+  { id: 'waters3', icon: '🗺️', name: 'Исследователь · 3 водоёма',need: 3,   of: r => r.waters },
+  { id: 'waters10',icon: '🧭', name: 'Странник · 10 водоёмов',   need: 10,  of: r => r.waters },
+  { id: 'lures5',  icon: '🧰', name: 'Арсенал · 5 приманок',     need: 5,   of: r => r.luresUsed },
+  { id: 'kg10',    icon: '⚖️', name: '10 кг за сезон',           need: 10000, of: r => r.totalG },
 ];
 
 export function achievements(entries) {

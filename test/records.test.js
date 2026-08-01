@@ -10,11 +10,11 @@ const check = (name, fn) => { try { fn(); console.log('  ✓ ' + name); pass++; 
 console.log('\nЗорька · тест рекордов и достижений\n');
 
 const entries = [
-  { date: '2026-07-24', catches: [
+  { date: '2026-07-24', spot: 'Зирган', catches: [
     { species: 'pike',  weight: 5200, lure: 'воблер' },   // трофей (порог 5000)
     { species: 'perch', weight: 200,  lure: 'воблер' },
   ]},
-  { date: '2026-07-25', catches: [
+  { date: '2026-07-25', spot: 'Нугуш', catches: [
     { species: 'perch', weight: 300,  lure: 'микроджиг' },
     { species: 'pike',  weight: 1000, lure: 'воблер' },
   ]},
@@ -32,6 +32,8 @@ check('personalRecords — итоги и рекорды', () => {
   assert.equal(r.personalBest.species, 'pike');
   assert.equal(r.personalBest.weight, 5200);
   assert.equal(r.biggest.perch.weight, 300);
+  assert.equal(r.waters, 2);        // Зирган + Нугуш
+  assert.equal(r.luresUsed, 2);     // воблер + микроджиг
 });
 
 check('personalRecords — пустой дневник', () => {

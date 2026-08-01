@@ -7,11 +7,13 @@ export function personalRecords(entries) {
   const list = entries || [];
   const biggest = {}, lureCount = {}, speciesCount = {};
   let totalFish = 0, totalG = 0, trophies = 0;
-  const days = new Set();
+  const days = new Set(), waters = new Set(), luresUsed = new Set();
   for (const e of list) {
     const cs = e.catches || [];
     if (cs.length && e.date) days.add(e.date);
+    if (e.spot && String(e.spot).trim()) waters.add(String(e.spot).trim().toLowerCase());
     for (const c of cs) {
+      if (c.lure) luresUsed.add(String(c.lure).trim().toLowerCase());
       totalFish++;
       totalG += c.weight || 0;
       speciesCount[c.species] = (speciesCount[c.species] || 0) + 1;
@@ -30,6 +32,8 @@ export function personalRecords(entries) {
   return {
     totalFish, totalG, trophies,
     days: days.size,
+    waters: waters.size,
+    luresUsed: luresUsed.size,
     speciesCount: Object.keys(speciesCount).length,
     favLure: favLure ? { lure: favLure[0], n: favLure[1] } : null,
     topSpecies: topSpecies ? { species: topSpecies[0], name: (byId(topSpecies[0]) || {}).n || topSpecies[0], n: topSpecies[1] } : null,
