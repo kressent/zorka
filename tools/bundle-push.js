@@ -1,16 +1,26 @@
 'use strict';
-// Копирует чистые модули движка в папку Edge-функции forecast-push/lib,
-// чтобы серверный прогноз был ИДЕНТИЧЕН клиентскому (без дублирования логики).
-// Запуск:  node tools/bundle-push.js   (перед деплоем функции, если движок менялся)
+// Копирует чистые модули движка/логики в папки Edge-функций (lib), чтобы серверный
+// код был ИДЕНТИЧЕН клиентскому (без дублирования логики). Запуск перед деплоем
+// функций, если что-то из движка менялось:  node tools/bundle-push.js
 import { copyFileSync, mkdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const src = join(root, 'js');
-const dst = join(root, 'supabase', 'functions', 'forecast-push', 'lib');
-mkdirSync(dst, { recursive: true });
+const fns = join(root, 'supabase', 'functions');
 
-const FILES = ['data.js', 'astro.js', 'score.js', 'forecastAlert.js'];
-for (const f of FILES) { copyFileSync(join(src, f), join(dst, f)); console.log('  ✓ ' + f); }
-console.log('Готово: движок скопирован в forecast-push/lib (' + FILES.length + ' файла).');
+// какой функции какие модули нужны
+const TARGETS = {
+  'forecast-push': ['data.js', 'astro.js', 'score.js', 'forecastAlert.js'],
+  'telegram-bot':  ['data.js', 'astro.js', 'score.js', 'postgen.js', 'locations.js'],
+  'telegram-daily':['data.js', 'astro.js', 'score.js', 'postgen.js'],
+};
+
+for (const [fn, files] of Object.entries(TARGETS)) {
+  const dst = join(fns, fn, 'lib');
+  mkdirSync(dst, { recursive: true });
+  for (const f of files) copyFileSync(join(src, f), join(dst, f));
+  console.log(`  ✓ ${fn}/lib ← ${files.join(', ')}`);
+}
+console.log('Готово: движок разложен по функциям.');
