@@ -4,9 +4,21 @@
 import { getForecast } from './forecast.js';
 import { forecastPost } from '../js/postgen.js';
 import { searchCities } from '../js/locations.js';
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+import { dirname, join } from 'node:path';
+
+// мини-загрузчик .env (без зависимостей): bot/.env → process.env
+try {
+  const envPath = join(dirname(fileURLToPath(import.meta.url)), '.env');
+  for (const line of readFileSync(envPath, 'utf8').split(/\r?\n/)) {
+    const m = line.match(/^\s*([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*)\s*$/);
+    if (m && !process.env[m[1]]) process.env[m[1]] = m[2].replace(/^["']|["']$/g, '');
+  }
+} catch (e) { /* .env нет — берём токен из переменной окружения */ }
 
 const TOKEN = process.env.ZORKA_BOT_TOKEN;
-if (!TOKEN) { console.error('Нет ZORKA_BOT_TOKEN. Получи токен у @BotFather и запусти: ZORKA_BOT_TOKEN=... node bot/bot.js'); process.exit(1); }
+if (!TOKEN) { console.error('Нет ZORKA_BOT_TOKEN. Создай bot/.env со строкой ZORKA_BOT_TOKEN=твой_токен (или задай переменную окружения).'); process.exit(1); }
 const API = `https://api.telegram.org/bot${TOKEN}`;
 const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 

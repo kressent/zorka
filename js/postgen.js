@@ -33,7 +33,10 @@ export function forecastPost(fc, place, opts = {}) {
     L.push(`🏆 Лучший день впереди — ${fc.bestDay.name} (${fc.bestDay.score.toFixed(1)}/5).`);
   }
   L.push('');
-  L.push('Подробный прогноз по часам и на твою точку — в приложении «На крючке». Ни хвоста ни чешуи! 🐟');
+  L.push('Подробный прогноз по часам, дневник уловов и карта мест — в приложении «На крючке»:');
+  L.push(opts.appUrl || 'https://kressent.github.io/zorka/');
+  L.push('');
+  L.push('Ни хвоста ни чешуи! 🐟');
   return L.join('\n');
 }
 
