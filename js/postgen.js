@@ -40,6 +40,28 @@ export function forecastPost(fc, place, opts = {}) {
   return L.join('\n');
 }
 
+// дайджест по нескольким водоёмам — один пост в канал.
+// items: [{ place, fc }]; opts.dateLabel — «3 августа», opts.appUrl, opts.bot.
+export function forecastDigest(items, opts = {}) {
+  const L = [];
+  L.push(`🎣 Клёв в Башкирии${opts.dateLabel ? ' — ' + opts.dateLabel : ''}`);
+  L.push('');
+  for (const it of (items || [])) {
+    const fc = it && it.fc; if (!fc) continue;
+    const best = fc.fish.find(f => f.sc >= 3) || fc.fish[0];
+    const w = (fc.bestWindows && fc.bestWindows[0]) ? `, окно ${fc.bestWindows[0]}` : '';
+    const fishTxt = (best && best.sc > 0) ? `${best.n.toLowerCase()} на ${best.lr[0]}${w}` : 'клёв слабый';
+    L.push(`${scEmoji(fc.day.score)} ${it.place} — ${fc.day.score.toFixed(1)}/5 · ${fishTxt}`);
+  }
+  L.push('');
+  L.push('Подробный прогноз по часам, дневник уловов и карта мест — в приложении:');
+  L.push(opts.appUrl || 'https://kressent.github.io/zorka/');
+  if (opts.bot) L.push(`Прогноз на любой свой водоём — ${opts.bot}`);
+  L.push('');
+  L.push('Ни хвоста ни чешуи! 🐟');
+  return L.join('\n');
+}
+
 // короткий вариант (для пуша/тизера)
 export function forecastTeaser(fc, place) {
   const best = fc.fish.find(f => f.sc >= 3);
