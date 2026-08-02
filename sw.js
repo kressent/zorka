@@ -3,7 +3,7 @@
 // Стратегия: оболочку приложения кэшируем (offline-first), погоду (Open-Meteo)
 // не кэшируем на уровне SW — у приложения свой кэш в localStorage на 3 часа.
 
-const VERSION = 'zorka-v74';
+const VERSION = 'zorka-v75';
 const SHELL = [
   './',
   './index.html',
@@ -73,7 +73,8 @@ self.addEventListener('notificationclick', (e) => {
   const url = (e.notification.data && e.notification.data.url) || './';
   e.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then(list => {
-      for (const c of list) { if ('focus' in c) return c.focus(); }
+      // приложение уже открыто — фокус + сообщаем, куда перейти (deep-link)
+      for (const c of list) { if ('focus' in c) { try { c.postMessage({ type: 'notif-open', url }); } catch (_) {} return c.focus(); } }
       if (clients.openWindow) return clients.openWindow(url);
     })
   );

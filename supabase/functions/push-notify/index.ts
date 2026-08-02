@@ -35,7 +35,7 @@ Deno.serve(async (req) => {
     const body = JSON.stringify({
       title: isComment ? '💬 Новый комментарий' : '❤️ Твой улов оценили',
       body: isComment ? 'Кто-то прокомментировал твой улов в «На крючке» 🎣' : 'Твой улов получил лайк 🎣',
-      url: './',
+      url: './?c=' + encodeURIComponent(tripKey),   // deep-link → комментарии выезда
     });
 
     await Promise.all(subs.map((s: any) =>

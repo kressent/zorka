@@ -1272,6 +1272,15 @@ export function initUI(){
       if (u) { try { history.replaceState(null, '', window.location.pathname); } catch(e){} toast('Вход выполнен — облако подключено ☁️'); rerender(); }
     }).catch(()=>{});
   }
+  // deep-link из пуш-уведомления: ?c=<tripKey> → открыть комментарии выезда
+  const _openDeep = (str)=>{ try{ const m=/[?&]c=([^&]+)/.exec(str||''); if(m){ const k=decodeURIComponent(m[1]); ST.tab='feed'; rerender(); setTimeout(()=>{ try{ openComments(k); }catch(e){} }, 500); } }catch(e){} };
+  if (typeof window!=='undefined' && window.location && window.location.search) {
+    _openDeep(window.location.search);
+    try{ history.replaceState(null,'',window.location.pathname); }catch(e){}
+  }
+  if (typeof navigator!=='undefined' && navigator.serviceWorker && navigator.serviceWorker.addEventListener) {
+    navigator.serviceWorker.addEventListener('message', e=>{ if(e && e.data && e.data.type==='notif-open') _openDeep(e.data.url); });
+  }
   window.Z = {
     tab, reload:()=>loadWeather(),
     filter:(f)=>{ ST.filter=f; saveSettings(); rerender(); },
