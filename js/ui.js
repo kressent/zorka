@@ -898,6 +898,7 @@ async function openAccount(){
         <input id="ac_handle" maxlength="24" value="${esc(handle)}" placeholder="напр. Щукарь52"></div>
       <button class="act" onclick="Z.saveHandle()">Сохранить ник</button>
       <button class="act" style="border-color:var(--jade);color:var(--jade);margin-top:10px" onclick="Z.invite()">🎣 Позвать друга на рыбалку</button>
+      <button class="act" style="margin-top:10px" onclick="Z.tg()">📢 Наш Telegram — прогноз каждое утро</button>
       <button class="act" style="border-color:var(--brass);color:var(--brass);margin-top:10px" onclick="Z.install()">📲 Установить на телефон</button>
       <details class="acc-more"><summary>Аккаунт и синхронизация</summary>
         <p style="font-size:13px;margin-top:8px">Вход выполнен: <b>${esc(user.email||'')}</b></p>
@@ -1286,7 +1287,7 @@ export function initUI(){
     filter:(f)=>{ ST.filter=f; saveSettings(); rerender(); },
     tf:(el)=>el.classList.toggle('open'),
     openCity, searchCity, pickCity, cityPick, geo, closeModal, openNotif, shareForecast, onboardDone, openMoon, openDay, openConfidence, reportWater, clearNotifs, notifOpen, openWaters,
-    openAccount, signIn: acSignIn, setPass: acSetPass, signOut: acSignOut, syncNow: acSyncNow, saveHandle: acSaveHandle, enablePush: acEnablePush, pushAllow, pushLater, install: promptInstall, invite: inviteFriend,
+    openAccount, signIn: acSignIn, setPass: acSetPass, signOut: acSignOut, syncNow: acSyncNow, saveHandle: acSaveHandle, enablePush: acEnablePush, pushAllow, pushLater, install: promptInstall, invite: inviteFriend, tg:()=>{ try{ window.open('https://t.me/nakryuchke_rb','_blank','noopener'); }catch(e){} },
     like: feedLike, comments: openComments, sendComment, delComment, report: reportTrip, feedMode:(m)=>{ feedFilter=m; rerender(); }, feedSp:(s)=>{ feedSpecies=(s&&s!==feedSpecies)?s:null; loadFeed(); }, where: openWhere,
     leaderPeriod:(p)=>{ leaderPeriod=p; const box=$('leadBox'); if(box && _feedCache) box.outerHTML=leaderBoxHTML(_feedCache); },
     waterProfile: openWaterProfile,
