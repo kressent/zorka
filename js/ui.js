@@ -25,6 +25,7 @@ import { nearbyCatches, whereSpecies } from './nearby.js';
 import { clusterWaters, waterProfile } from './waterbodies.js';
 import { nearbySignal, calibrate } from './calibrate.js';
 import { refWaters, refWhere, inRefRegion } from './waterref.js';
+import { suggestSpecies } from './suggest.js';
 import { personalRecords, fishingYear } from './records.js';
 import { achievements } from './achievements.js';
 import { forecastPost } from './postgen.js';
@@ -1061,6 +1062,20 @@ function newEntry(dateStr){
   renderEntry();
 }
 function editEntry(id){ const e=Diary.getEntries().find(x=>x.id===id); if(e){ draft=JSON.parse(JSON.stringify(e)); renderEntry(); } }
+// умные подсказки видов для текущей точки/сезона (ловят рядом → регион → сезон)
+function suggestHTML(){
+  const lat = draft.lat!=null?draft.lat:(ST.city?ST.city.lat:null);
+  const lon = draft.lon!=null?draft.lon:(ST.city?ST.city.lon:null);
+  const month = (()=>{ const m=new Date(draft.date+'T12:00:00').getMonth(); return m>=0?m+1:null; })();
+  const signal = (cloudEnabled() && lat!=null) ? nearbySignal(_feedCache||[], lat, lon, {}) : null;
+  const refSp = inRefRegion(lat,lon) ? [...new Set(refWaters(lat,lon).slice(0,3).flatMap(w=>w.species))] : [];
+  const have = new Set((draft.catches||[]).map(c=>c.species));
+  const list = suggestSpecies({ signal, refSpecies:refSp, month, limit:6 }).filter(s=>!have.has(s.species));
+  if(!list.length) return '';
+  const chips = list.map(s=>{ const f=byId(s.species); if(!f) return '';
+    return `<button class="sug-chip" onclick="Z.addCatch('${s.species}')" title="${esc(s.reason||'')}"><span class="fd" style="background:${f.col}"></span>${esc(f.n)}<span class="sug-why">${esc(s.reason||'')}</span></button>`; }).join('');
+  return `<div class="sug-row"><span class="sug-lbl">Похоже, клюёт:</span>${chips}</div>`;
+}
 function renderEntry(){
   const d=new Date(draft.date+'T12:00:00');
   const picker = SPECIES.map(f=>`<button onclick="Z.addCatch('${f.id}')"><span class="fd" style="background:${f.col}"></span>${f.n}</button>`).join('');
@@ -1078,7 +1093,7 @@ function renderEntry(){
     <div class="field"><label>Место (по желанию)</label><input id="e_spot" value="${esc(draft.spot||'')}" placeholder="напр. Устье Нугуша"></div>
     <div class="field"><label>Точка на карте (по желанию)</label>
       <button class="act" style="margin-top:0;padding:9px;border-color:var(--jade);color:var(--jade)" onclick="Z.pickEntryLoc()">📍 ${draft.lat!=null?`Точка задана ✓ (${draft.lat.toFixed(3)}, ${draft.lon.toFixed(3)}) — изменить`:'Указать место на карте'}</button></div>
-    <div class="field"><label>Что поймал — по каждой рыбе свой вес</label><div class="fishpick">${picker}</div></div>
+    <div class="field"><label>Что поймал — по каждой рыбе свой вес</label>${suggestHTML()}<div class="fishpick">${picker}</div></div>
     <div id="catchRows">${rows||'<p style="font-size:12px;color:var(--slate);margin:6px 0">Нажми на рыбу выше, чтобы добавить. Вес пустой = «не взвешивал».</p>'}</div>
     <div class="field"><label>Оценка</label><div class="stars" id="stars">${stars}</div></div>
     <div class="field"><label>Заметка</label><textarea id="e_note" placeholder="что сработало, погода, место…">${esc(draft.note||'')}</textarea></div>

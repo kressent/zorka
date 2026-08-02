@@ -215,6 +215,11 @@ button{font-family:inherit}
 .fishpick button{background:var(--card);border:1px solid var(--line);color:var(--slate);font:inherit;font-size:12.5px;padding:6px 10px;cursor:pointer;display:flex;align-items:center;gap:6px}
 .fishpick button.on{border-color:var(--jade);color:var(--ink);background:rgba(44,110,90,.08)}
 .fishpick .fd{width:7px;height:7px;border-radius:50%}
+.sug-row{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin:2px 0 8px}
+.sug-lbl{font-family:var(--font-mono);font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--jade);width:100%}
+.sug-chip{background:rgba(44,110,90,.08);border:1px solid var(--jade);color:var(--ink);font:inherit;font-size:12.5px;padding:6px 10px;cursor:pointer;display:inline-flex;align-items:center;gap:6px}
+.sug-chip .fd{width:7px;height:7px;border-radius:50%}
+.sug-chip .sug-why{font-family:var(--font-mono);font-size:9px;color:var(--jade);opacity:.85}
 .city-item{display:flex;justify-content:space-between;align-items:center;padding:11px 4px;border-bottom:1px solid var(--line);cursor:pointer}
 .city-item .city-sub{font-family:var(--font-mono);font-size:10px;color:var(--slate)}
 .stars{display:flex;gap:6px;font-size:24px;color:var(--empty);cursor:pointer}
