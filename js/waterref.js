@@ -24,6 +24,14 @@ export const WATER_REF = [
     species: ['chub', 'pike', 'perch', 'ide'], months: [5, 6, 7, 8, 9] },
   { name: 'Озеро Яктыкуль (Банное)', lat: 53.60, lon: 58.63, type: 'озеро (горное)',
     species: ['pike', 'perch', 'roach'], months: [6, 7, 8] },
+  { name: 'Река Уфа (Уфимка)', lat: 55.50, lon: 56.55, type: 'река',
+    species: ['zander', 'bream', 'chub', 'ide', 'pike'], months: [5, 6, 7, 8, 9] },
+  { name: 'Река Юрюзань', lat: 55.00, lon: 58.30, type: 'река (горная)',
+    species: ['chub', 'ide', 'pike', 'perch'], months: [5, 6, 7, 8, 9] },
+  { name: 'Озеро Талкас', lat: 53.36, lon: 58.37, type: 'озеро (горное)',
+    species: ['pike', 'perch', 'roach'], months: [6, 7, 8] },
+  { name: 'Озеро Ургун', lat: 54.32, lon: 59.42, type: 'озеро',
+    species: ['pike', 'perch', 'roach'], months: [6, 7, 8, 9] },
 ];
 
 // Показываем справочник только в стартовом регионе (Башкортостан), чтобы не
