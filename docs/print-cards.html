@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>На крючке — печатные макеты для магазинов</title>
+<style>
+  :root{--paper:#EFE9DB;--card:#F4EFE3;--ink:#10322D;--jade:#2C6E5A;--brass:#C58A2E;--slate:#5C6E64;--line:#D8CFBA;
+    --serif:Georgia,"Times New Roman",serif;--mono:ui-monospace,"SF Mono",Menlo,monospace;--sans:"Segoe UI",system-ui,sans-serif}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:#cbc4b2;font-family:var(--sans);color:var(--ink);padding:20px;display:flex;flex-direction:column;align-items:center;gap:20px}
+  .hint{max-width:600px;font-size:13px;color:#333;background:#fff;border:1px solid #bbb;padding:12px 14px;border-radius:6px;line-height:1.5}
+  .hint b{color:#000}
+  .label{font-family:var(--mono);font-size:12px;color:#444;align-self:flex-start;max-width:600px;margin:6px auto 0;width:100%}
+  .frame{background:var(--paper);color:var(--ink);position:relative;box-shadow:0 4px 20px rgba(0,0,0,.25);
+    background-image:radial-gradient(120% 55% at 50% 0%,rgba(44,110,90,.14),transparent 60%)}
+  .frame::before{content:"";position:absolute;inset:5mm;border:1.5px solid var(--ink)}
+  .frame::after{content:"";position:absolute;inset:6.5mm;border:1px solid var(--brass)}
+  .in{position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;height:100%;text-align:center}
+  .brand{font-family:var(--mono);letter-spacing:.26em;color:var(--brass);font-weight:700;text-transform:uppercase}
+  h1{font-family:var(--serif);font-weight:700;line-height:1.05}
+  .sub{font-family:var(--serif);font-style:italic;color:var(--slate)}
+  .qr{background:#fff;display:flex;align-items:center;justify-content:center}
+  .qr img{width:100%;height:100%;object-fit:contain}
+  .url{font-family:var(--mono);font-weight:700;color:var(--jade)}
+  .cta{font-family:var(--serif);font-style:italic;color:var(--slate)}
+
+  /* ── Карточка у кассы (85×90 мм, «домиком» можно согнуть, или ламинировать) ── */
+  .card{width:85mm;height:90mm;padding:9mm 7mm}
+  .card .brand{font-size:9px;margin-top:1mm}
+  .card h1{font-size:23px;margin:2mm 0 1mm}
+  .card .sub{font-size:12px;margin-bottom:3mm}
+  .card .qr{width:34mm;height:34mm;margin:1mm 0 2mm}
+  .card .url{font-size:11px}
+  .card .cta{font-size:11px;margin-top:2mm}
+
+  /* ── А5-плакат (148×210 мм) на витрину/дверь ── */
+  .poster{width:148mm;height:210mm;padding:16mm 14mm}
+  .poster .brand{font-size:12px;margin-top:2mm}
+  .poster h1{font-size:44px;margin:5mm 0 2mm}
+  .poster .sub{font-size:18px;margin-bottom:6mm}
+  .poster .big{font-family:var(--serif);font-size:22px;line-height:1.35;margin:0 4mm 6mm;color:var(--ink)}
+  .poster .qr{width:64mm;height:64mm;margin:2mm 0 4mm}
+  .poster .url{font-size:16px}
+  .poster .cta{font-size:15px;margin-top:3mm}
+
+  @media print{
+    body{background:#fff;padding:0;gap:0}
+    .hint,.label{display:none}
+    .frame{box-shadow:none;page-break-after:always}
+    @page{margin:6mm}
+  }
+</style>
+</head>
+<body>
+
+  <div class="hint">
+    <b>Два макета для магазинов.</b> QR вставляется автоматически (нужен интернет при открытии),
+    ведёт на kressent.github.io/zorka. Печать: <b>Ctrl+P</b>. Карточку у кассы лучше
+    <b>заламинировать</b> (копицентр, ~20 ₽) — не помнётся. Плакат — на витрину/дверь.
+    Каждый макет печатается на отдельной странице. Жёлтые подписи при печати скрываются.
+  </div>
+
+  <div class="label">▼ Карточка у кассы (85×90 мм) — заламинировать, поставить домиком</div>
+  <div class="frame card">
+    <div class="in">
+      <div class="brand">Прогноз клёва · бесплатно</div>
+      <h1>На крючке</h1>
+      <div class="sub">знай, когда клюёт</div>
+      <div class="qr"><img src="https://api.qrserver.com/v1/create-qr-code/?size=400x400&margin=0&data=https%3A%2F%2Fkressent.github.io%2Fzorka%2F" alt="QR" onerror="this.parentNode.innerHTML='kressent.github.io/zorka'"></div>
+      <div class="url">kressent.github.io/zorka</div>
+      <div class="cta">Наведи камеру телефона 🎣</div>
+    </div>
+  </div>
+
+  <div class="label">▼ А5-плакат (148×210 мм) — на витрину или дверь</div>
+  <div class="frame poster">
+    <div class="in">
+      <div class="brand">Прогноз клёва · дневник · карта</div>
+      <h1>На крючке</h1>
+      <div class="sub">знай, когда клюёт</div>
+      <div class="big">Что клюёт <b>сегодня</b> и на что —<br>по погоде, давлению, луне и воде.<br>Прогноз на водоёмы Башкирии.<br>Бесплатно, ставить ничего не надо.</div>
+      <div class="qr"><img src="https://api.qrserver.com/v1/create-qr-code/?size=600x600&margin=0&data=https%3A%2F%2Fkressent.github.io%2Fzorka%2F" alt="QR" onerror="this.parentNode.innerHTML='kressent.github.io/zorka'"></div>
+      <div class="url">kressent.github.io/zorka</div>
+      <div class="cta">Наведи камеру телефона — и лови 🐟</div>
+    </div>
+  </div>
+
+</body>
+</html>
