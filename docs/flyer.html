@@ -41,11 +41,10 @@
 <body>
 
   <div class="hint">
-    <b>Как сделать флаер:</b> 1) Сгенерируй QR для ссылки
-    <b>kressent.github.io/zorka</b> на любом бесплатном сервисе (qr-code.ru, qrcoder.ru) →
-    сохрани картинку. 2) Замени пунктирный квадрат ниже: вставь <code>&lt;img src="qr.png"&gt;</code>
-    внутрь <code>.qr</code> (или просто вклей QR в распечатанный флаер). 3) Печать: Ctrl+P →
-    формат A6, или размести 4 копии на A4. <b>Этот блок при печати скрывается.</b>
+    <b>QR уже вставлен</b> (сгенерируется автоматически при открытии с интернетом — ведёт на
+    kressent.github.io/zorka). Просто нажми <b>Ctrl+P</b> → печать. Формат A6, или размести
+    несколько копий на A4. Наведи камеру телефона на QR и проверь, что открывается. <b>Этот
+    жёлтый блок при печати скрывается.</b>
   </div>
 
   <div class="flyer">
@@ -62,7 +61,7 @@
       </ul>
 
       <div class="qr-wrap">
-        <div class="qr">СЮДА<br>QR-код на<br>kressent.github.io/zorka</div>
+        <div class="qr"><img src="https://api.qrserver.com/v1/create-qr-code/?size=400x400&margin=0&data=https%3A%2F%2Fkressent.github.io%2Fzorka%2F" alt="QR на kressent.github.io/zorka" onerror="this.style.display='none';this.parentNode.innerHTML='QR:<br>kressent.github.io/zorka'"></div>
         <div class="url">kressent.github.io/zorka</div>
       </div>
 
