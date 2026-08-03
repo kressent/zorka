@@ -33,31 +33,34 @@ const PAPER='#EFE9DB', INK='#10322D', JADE='#2C6E5A', BRASS='#C58A2E', SLATE='#5
 const c=document.getElementById('c'), g=c.getContext('2d'), W=1590, H=400;
 
 function draw(){
+  const cx=W/2;
   // фон бумага
   g.fillStyle=PAPER; g.fillRect(0,0,W,H);
-  // водное свечение справа-сверху
-  const rg=g.createRadialGradient(W*0.80,-40,60, W*0.80,-40,720);
-  rg.addColorStop(0,'rgba(44,110,90,0.22)'); rg.addColorStop(1,'rgba(44,110,90,0)');
+  // водное свечение сверху по центру
+  const rg=g.createRadialGradient(cx,-60,80, cx,-60,760);
+  rg.addColorStop(0,'rgba(44,110,90,0.20)'); rg.addColorStop(1,'rgba(44,110,90,0)');
   g.fillStyle=rg; g.fillRect(0,0,W,H);
-  // крупная рыба-водяной знак
+  // рыбки-акценты по краям (в «обрезаемой» зоне — просто украшение)
   g.textAlign='center'; g.textBaseline='middle';
-  g.globalAlpha=0.12; g.font='210px '+SERIF; g.fillText('🎣', W-190, H/2-10); g.globalAlpha=1;
-  // тексты слева
-  g.textAlign='left'; g.textBaseline='alphabetic';
+  g.globalAlpha=0.10; g.font='150px '+SERIF;
+  g.fillText('🎣', 150, H/2); g.fillText('🐟', W-150, H/2); g.globalAlpha=1;
+
+  // ВСЁ ВАЖНОЕ — ПО ЦЕНТРУ (в безопасной зоне ВК)
+  g.textAlign='center';
+  g.textBaseline='alphabetic';
   try{g.letterSpacing='5px';}catch(e){}
-  g.fillStyle=BRASS; g.font='700 17px '+MONO; g.fillText('ПРОГНОЗ КЛЁВА · ДНЕВНИК · КАРТА', 90, 120);
+  g.fillStyle=BRASS; g.font='700 17px '+MONO; g.fillText('ПРОГНОЗ КЛЁВА · ДНЕВНИК · КАРТА', cx, 108);
   try{g.letterSpacing='0px';}catch(e){}
-  g.fillStyle=INK; g.font='700 104px '+SERIF; g.fillText('На крючке', 86, 218);
-  g.fillStyle=SLATE; g.font='italic 30px '+SERIF; g.fillText('знай, когда клюёт', 92, 262);
-  g.fillStyle=JADE; g.font='18px '+MONO; g.fillText('Честный прогноз по водоёмам Башкирии · бесплатно · без рекламы', 92, 300);
-  // ссылка справа снизу
-  g.textAlign='right'; g.fillStyle=BRASS; g.font='700 20px '+MONO; g.fillText('kressent.github.io/zorka', W-70, H-30);
-  // волна снизу
+  g.fillStyle=INK; g.font='700 100px '+SERIF; g.fillText('На крючке', cx, 210);
+  g.fillStyle=SLATE; g.font='italic 30px '+SERIF; g.fillText('знай, когда клюёт', cx, 252);
+  g.fillStyle=JADE; g.font='18px '+MONO; g.fillText('Честный прогноз по водоёмам Башкирии · бесплатно · без рекламы', cx, 292);
+  g.fillStyle=BRASS; g.font='700 19px '+MONO; g.fillText('kressent.github.io/zorka', cx, H-40);
+  // волна снизу (во всю ширину — можно в обрез)
   g.fillStyle='rgba(44,110,90,0.5)';
-  g.beginPath(); g.moveTo(0,H-30);
-  g.bezierCurveTo(260,H-60,400,H-4,640,H-30);
-  g.bezierCurveTo(880,H-56,1040,H-4,1280,H-32);
-  g.bezierCurveTo(1420,H-48,1520,H-18,W,H-34);
+  g.beginPath(); g.moveTo(0,H-24);
+  g.bezierCurveTo(260,H-52,400,H-2,640,H-24);
+  g.bezierCurveTo(880,H-50,1040,H-2,1280,H-26);
+  g.bezierCurveTo(1420,H-42,1520,H-14,W,H-28);
   g.lineTo(W,H); g.lineTo(0,H); g.closePath(); g.fill();
 }
 // перерисуем ещё раз после подгрузки шрифтов (Georgia системный — обычно сразу)
