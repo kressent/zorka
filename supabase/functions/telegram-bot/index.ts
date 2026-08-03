@@ -9,6 +9,7 @@ import { searchCities, nearestCity, geoSearch } from './lib/locations.js';
 
 const TOKEN = Deno.env.get('TELEGRAM_BOT_TOKEN')!;
 const SECRET = Deno.env.get('TELEGRAM_WEBHOOK_SECRET') || '';
+const OWNER = Deno.env.get('OWNER_CHAT') || '839960248';   // личка владельца (для /id)
 const API = `https://api.telegram.org/bot${TOKEN}`;
 
 const HELLO = 'Привет! Это «На крючке» 🎣\nНапиши город или водоём — дам прогноз клёва на сегодня.\n'
@@ -61,6 +62,14 @@ Deno.serve(async (req) => {
   try {
     if (SECRET && req.headers.get('x-telegram-bot-api-secret-token') !== SECRET) return new Response('forbidden', { status: 401 });
     const update = await req.json();
+
+    // пост «/id» в канале, где бот админ → пришлём id канала владельцу в личку
+    const cp = update.channel_post;
+    if (cp && typeof cp.text === 'string' && cp.text.trim().toLowerCase() === '/id') {
+      await send(OWNER, `🆔 id канала «${cp.chat.title || ''}»: ${cp.chat.id}\n\nПришли это число мне (сюда, в переписку с Claude).`);
+      return ok();
+    }
+
     const m = update.message || update.edited_message;
     if (!m || !m.text) return ok();
     const chatId = m.chat.id;
