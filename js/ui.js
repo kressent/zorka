@@ -259,6 +259,7 @@ function renderDiary(){
       ${(e.spot||e.forecast)?`<div class="em">${e.spot?`<span class="mchip">${esc(e.spot)}</span>`:''}${e.forecast?`<span class="mchip">${e.forecast.avgP||''} мм</span><span class="mchip">${e.forecast.maxT}°</span>`:''}</div>`:''}
       ${cnt?`<div class="catchlist">${catches}<div class="cl tot"><span class="cn">Итого · ${cnt} ${cnt===1?'рыба':'рыб'}</span><span class="cw">${w?fmtW(w):'—'}</span></div></div>`
            :(e.visited?`<div style="font-size:12.5px;color:var(--slate);margin-top:8px">Был на рыбалке, без улова</div>`:'')}
+      ${e.groundbait?`<div class="en" style="font-style:normal;color:var(--slate)">🥣 Прикормка: ${esc(e.groundbait)}</div>`:''}
       ${e.note?`<div class="en">«${esc(e.note)}»</div>`:''}
       <div style="display:flex;gap:8px;margin-top:11px">
         ${(e.catches&&e.catches.length)?`<button class="act" style="flex:1;margin-top:0;padding:9px;border-color:var(--jade);color:var(--jade)" onclick="Z.shareCatch('${e.id}')">📤 Поделиться</button>`:''}
@@ -1115,6 +1116,7 @@ function renderEntry(){
     <div class="field"><label>Что поймал — по каждой рыбе свой вес</label>${suggestHTML()}<div class="fishpick">${picker}</div></div>
     <div id="catchRows">${rows||'<p style="font-size:12px;color:var(--slate);margin:6px 0">Нажми на рыбу выше, чтобы добавить. Вес пустой = «не взвешивал».</p>'}</div>
     <div class="field"><label>Оценка</label><div class="stars" id="stars">${stars}</div></div>
+    <div class="field"><label>🥣 Прикормка <span style="color:var(--slate);font-weight:400">(по желанию — фидер/поплавок)</span></label><input id="e_groundbait" maxlength="120" value="${esc(draft.groundbait||'')}" placeholder="напр. клубника/ваниль, фирма, или своя самодельная"></div>
     <div class="field"><label>Заметка</label><textarea id="e_note" placeholder="что сработало, погода, место…">${esc(draft.note||'')}</textarea></div>
     <label class="pub-toggle"><input type="checkbox" id="e_private" ${draft.private?'checked':''} onchange="Z.setPrivate(this.checked)"><span>🔒 Не показывать в общей ленте — только для меня</span></label>
     <button class="act" onclick="Z.saveEntry()">Сохранить</button>
@@ -1179,7 +1181,7 @@ function setDate(v){
   } else { draft.date = v; }
   renderEntry();
 }
-function syncEntryFields(){ const s=$('e_spot'),n=$('e_note'),p=$('e_private'); if(s)draft.spot=s.value; if(n)draft.note=n.value; if(p)draft.private=p.checked; }
+function syncEntryFields(){ const s=$('e_spot'),n=$('e_note'),p=$('e_private'),g=$('e_groundbait'); if(s)draft.spot=s.value; if(n)draft.note=n.value; if(p)draft.private=p.checked; if(g)draft.groundbait=g.value; }
 function saveEntry(){
   syncEntryFields();
   draft.visited=true;
