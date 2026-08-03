@@ -568,10 +568,12 @@ function openRegs(){
     <div class="lbl">🚫 Нерестовый запрет ${banStatus}</div>
     <div class="regs-li" style="margin-top:6px">Период: <b>${Regs && b ? (labelMDsafe(b.from)+'–'+labelMDsafe(b.to)) : '—'}</b></div>
     <div class="regs-li" style="color:var(--slate)">${esc(b.rules)}</div>
+    ${info.winterPits?`<div class="regs-li" style="color:var(--slate);margin-top:6px">❄️ ${esc(info.winterPits)}</div>`:''}
     <div class="lbl" style="margin-top:14px">⚖️ Норма вылова</div>
     <div class="regs-li">${esc(info.dailyNorm)}</div>
     <div class="lbl" style="margin-top:14px">📏 Минимальный размер (меньше — отпусти)</div>
     <div class="tag-row">${sizes}</div>
+    ${info.protectedTxt?`<div class="regs-warn" style="margin-top:10px">🚷 ${esc(info.protectedTxt)}</div>`:''}
     <div class="lbl" style="margin-top:14px">🚫 Запрещено</div>
     ${banned}
     <p style="font-size:11.5px;color:var(--slate);margin-top:14px;line-height:1.5">⚠️ Это ориентир. Правила меняются, по конкретным водоёмам даты уточняет рыбоохрана. Источник: ${esc(info.source)}</p>`);
