@@ -8,6 +8,17 @@ import { forecastDigest } from './lib/postgen.js';
 const TOKEN = Deno.env.get('TELEGRAM_BOT_TOKEN')!;
 const CHANNEL = Deno.env.get('TELEGRAM_CHANNEL')!;
 const BOT = Deno.env.get('TELEGRAM_BOT_USERNAME') || '@nakryuchke_fish_bot';
+const VK_TOKEN = Deno.env.get('VK_TOKEN');
+const VK_GROUP = Deno.env.get('VK_GROUP_ID');
+
+// параллельно — в ВК-группу (если задан ключ). Молча, не мешает Telegram.
+async function postVK(text: string) {
+  if (!VK_TOKEN || !VK_GROUP) return;
+  try {
+    const body = new URLSearchParams({ owner_id: '-' + VK_GROUP, from_group: '1', message: text, access_token: VK_TOKEN, v: '5.199' });
+    await fetch('https://api.vk.com/method/wall.post', { method: 'POST', body });
+  } catch (_) { /* тихо */ }
+}
 
 const PLACES = [
   { name: 'Павловское вдхр', lat: 55.42, lon: 56.65 },
@@ -54,6 +65,7 @@ Deno.serve(async () => {
       body: JSON.stringify({ chat_id: CHANNEL, text, disable_web_page_preview: true }),
     });
     const j = await r.json();
+    await postVK(text);
     return new Response(j.ok ? 'sent' : 'err: ' + JSON.stringify(j), { status: 200 });
   } catch (e) {
     return new Response('err: ' + ((e as Error)?.message || e), { status: 200 });
