@@ -108,7 +108,7 @@ button{font-family:inherit}
 .confbadge.c-low{color:var(--bad);border-color:var(--bad)}
 .c-high{color:var(--jade)} .c-medium{color:var(--brass)} .c-low{color:var(--bad)}
 .conf-why{font-size:12.5px;color:var(--ink);margin:5px 0;line-height:1.4}
-.conf-near{display:inline-block;margin-left:7px;font-family:var(--font-mono);font-size:9.5px;letter-spacing:.02em;color:var(--jade);border:1px solid var(--jade);padding:1px 5px;vertical-align:1px}
+.conf-near{display:inline-block;margin-right:7px;font-family:var(--font-mono);font-size:9.5px;letter-spacing:.02em;color:var(--jade);border:1px solid var(--jade);padding:1px 5px;vertical-align:1px}
 .conf-line{font-size:12.5px;color:var(--jade);background:rgba(44,110,90,.08);border-left:2px solid var(--jade);padding:6px 9px;margin:8px 0;line-height:1.4}
 .regs-li{font-size:13px;line-height:1.5;margin:4px 0}
 .regs-warn{font-size:13px;color:var(--brass);background:rgba(197,138,46,.10);border-left:2px solid var(--brass);padding:8px 10px;margin-top:8px;line-height:1.45}
@@ -342,10 +342,6 @@ button{font-family:inherit}
 /* колокольчик + центр уведомлений */
 .mast-right{display:flex;flex-direction:column;align-items:flex-end;gap:2px}
 .mr-icons{display:flex;gap:9px;align-items:center}
-.acct-in{display:inline-flex;align-items:center;gap:5px;background:none;border:1px solid var(--jade);color:var(--jade);
-  font:inherit;font-size:11px;font-weight:600;padding:3px 9px;border-radius:99px;max-width:120px;cursor:pointer;
-  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.dot-on{width:7px;height:7px;border-radius:50%;background:#2ea36a;flex:none}
 .acct-on{position:relative}
 .acct-on::after{content:"";position:absolute;top:1px;right:1px;width:9px;height:9px;background:#2ea36a;border:2px solid var(--paper);border-radius:50%}
 .bell{position:relative;background:none;border:none;font-size:20px;line-height:1;cursor:pointer;padding:2px;color:var(--ink)}

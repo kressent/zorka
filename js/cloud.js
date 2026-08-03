@@ -61,7 +61,7 @@ export async function signInOrUp(email, password) {
   const msg = (inRes.error.message || '').toLowerCase();
   // почта не подтверждена — но пароль верный: значит аккаунт есть, ждёт подтверждения
   if (msg.includes('email not confirmed')) {
-    throw new Error('Почта ещё не подтверждена. Владелец приложения отключит подтверждение — после этого войди этой же почтой и паролем.');
+    throw new Error('Аккаунт создан, но вход пока не проходит. Попробуй чуть позже или напиши разработчику (👤 → «Написать разработчику»).');
   }
   if (msg.includes('invalid login credentials')) {
     const redirect = (typeof window !== 'undefined' && window.location)
@@ -72,7 +72,7 @@ export async function signInOrUp(email, password) {
       if (em.includes('already registered'))
         throw new Error('Аккаунт с этой почтой уже есть, но пароль неверный.');
       if (em.includes('sending') || em.includes('smtp') || em.includes('mail') || up.error.status === 500 || !up.error.message)
-        throw new Error('Не удалось отправить письмо-подтверждение — проверь SMTP в Supabase (пароль приложения и порт: попробуй 587 вместо 465). Подробности — Supabase → Authentication → Logs.');
+        throw new Error('Не получилось создать аккаунт. Попробуй ещё раз чуть позже, или напиши разработчику (👤 → «Написать разработчику»).');
       throw up.error;
     }
     if (up.data.session) return up.data.user; // подтверждение почты выключено → сразу сессия

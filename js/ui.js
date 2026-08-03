@@ -145,7 +145,7 @@ function comfortMood(c){
   const verdict = good?'отличный день у воды':(c.rain||c.wind>8)?'погода не балует':'нормально у воды';
   return `«${temp}, ${wind}, ${rain} — ${verdict}.»`;
 }
-const FILTERS = [['predator','Хищник'],['peaceful','Мирная'],['all','Все'],['custom','Своя']];
+const FILTERS = [['predator','Хищник'],['peaceful','Мирная'],['all','Все']];
 
 function renderForecast(){
   if(!ST.city) return noCity();
@@ -171,7 +171,7 @@ function renderForecast(){
     const conf = f.confirmed ? `<span class="conf-near" title="Сообщество реально ловит этот вид рядом">✓ ловят рядом${f.confCount>1?' · '+f.confCount:''}</span>` : '';
     return `<div class="fr" onclick="Z.tf(this)">
         <span class="fd" style="width:9px;height:9px;border-radius:50%;background:${f.col};flex:none"></span>
-        <div class="fn"><b>${f.n}</b><span>${esc(lure)}${conf}</span></div>
+        <div class="fn"><b>${f.n}</b><span>${conf}${esc(lure)}</span></div>
         ${bars(f.sc)}<span class="chev">▾</span></div>
       <div class="fbody">
         ${spawn?`<div class="spawn-warn">⚠️ Период нереста — рыба почти не кормится</div>`:''}
@@ -253,7 +253,7 @@ function renderDiary(){
     <div class="stat"><b>${s.trips}</b><span>рыбалок</span></div>
     <div class="stat"><b>${s.withCatch}</b><span>с уловом</span></div>
     <div class="stat"><b>${s.fishCount}</b><span>рыб</span></div>
-    <div class="stat"><b>${(s.totalG/1000).toFixed(1)}</b><span>кг</span></div></div>
+    <div class="stat"><b>${(s.totalG/1000).toFixed(1).replace('.',',')}</b><span>кг</span></div></div>
     ${s.topSpecies.length?`<div class="lbl" style="margin-top:14px">Чаще всего</div><div class="tag-row">${s.topSpecies.map(([n,c])=>`<span class="tg">${esc(n)} · ${c}</span>`).join('')}</div>`:''}`;
 
   const entriesHTML = entries.length ? entries.map(e=>{
@@ -612,7 +612,7 @@ function openRecords(){
     ${pb?`<div class="rec-line">🥇 Личный рекорд: <b>${esc(pb.name)} ${fmtW(pb.weight)}</b>${pb.date?` · ${fmtDate(pb.date)}`:''}</div>`:''}
     ${r.favLure?`<div class="rec-line">🎣 Любимая приманка: <b>${esc(r.favLure.lure)}</b> · ${r.favLure.n}</div>`:''}
     ${r.topSpecies?`<div class="rec-line">🐟 Чаще всего: <b>${esc(r.topSpecies.name)}</b> · ${r.topSpecies.n}</div>`:''}
-    <div class="rec-line">📅 Дней на воде: <b>${r.days}</b> · всего <b>${(r.totalG/1000).toFixed(1)} кг</b></div>`;
+    <div class="rec-line">📅 Дней на воде: <b>${r.days}</b> · всего <b>${(r.totalG/1000).toFixed(1).replace('.',',')} кг</b></div>`;
   const trophies = Object.entries(r.biggest).filter(([sp,b])=>isTrophy(sp,b.weight));
   const troHTML = trophies.length ? `<div class="lbl" style="margin-top:16px">🏆 Твои трофеи</div><div class="tag-row">${trophies.map(([sp,b])=>`<span class="tg real">${esc((byId(sp)||{}).n||sp)} ${fmtW(b.weight)}</span>`).join('')}</div>` : '';
   const acc = forecastAccuracy(entries);
@@ -647,7 +647,7 @@ function openYear(yr){
   openModal(`<h3>🗓 Рыболовный год ${esc(year)}</h3>${pick}
     <div class="prof-stats prof-stats-3">
       <div><b>${s.totalFish}</b><span>рыб</span></div>
-      <div><b>${(s.totalG/1000).toFixed(1)}</b><span>кг</span></div>
+      <div><b>${(s.totalG/1000).toFixed(1).replace('.',',')}</b><span>кг</span></div>
       <div><b>${s.days}</b><span>выездов</span></div>
     </div>
     ${hi}
@@ -668,7 +668,7 @@ function exportDiary(){
       entries:Diary.getEntries(), places:getPlaces(), kits:Tackle.getKits() };
     const blob = new Blob([JSON.stringify(data,null,2)], {type:'application/json'});
     const url = URL.createObjectURL(blob);
-    const a = document.createElement('a'); a.href=url; a.download='zorka-dnevnik.json'; a.click();
+    const a = document.createElement('a'); a.href=url; a.download='nakryuchke-dnevnik.json'; a.click();
     setTimeout(()=>URL.revokeObjectURL(url), 5000);
     toast('Дневник сохранён в файл 📥');
   }catch(e){ toast('Не удалось экспортировать'); }
@@ -728,7 +728,7 @@ async function loadFeed(){
   if(!cloudEnabled()){ box.innerHTML=feedEmpty('Облако не настроено.'); return; }
   try{
     let items=await getFeed(true);
-    if(!items.length){ box.innerHTML=feedEmpty('Пока пусто. Запиши улов в дневнике — и он появится тут (для всех, место огрублённо).'); return; }
+    if(!items.length){ box.innerHTML=feedEmpty('Пока пусто. Запиши улов в дневнике — и он появится тут (для всех, место огрублённо).', true); return; }
     const me = Cloud.cachedUser() ? await Cloud.currentUserId() : null;
     const ids = items.map(i=>i.id);
     const [liked, myRep, repCounts] = await Promise.all([
@@ -739,7 +739,7 @@ async function loadFeed(){
     // антиспам: прячем то, на что я пожаловался, и то, на что ≥3 жалоб (кроме своих)
     const REPORT_HIDE=3;
     items = items.filter(it => !myRep.has(it.id) && ((repCounts[it.id]||0) < REPORT_HIDE || it.user_id===me));
-    if(!items.length){ box.innerHTML=feedEmpty('Пока пусто. Запиши улов в дневнике — и он появится тут (для всех, место огрублённо).'); return; }
+    if(!items.length){ box.innerHTML=feedEmpty('Пока пусто. Запиши улов в дневнике — и он появится тут (для всех, место огрублённо).', true); return; }
     const lead = leaderBoxHTML(items);                      // 🏆 лидерборд — всегда общий (неделя/месяц/сезон)
     const spAll = [...new Set(items.flatMap(t=>(t.fish||[]).map(f=>f&&f.species).filter(Boolean)))];
     const spChips = spAll.length>1 ? `<div class="feed-sp">${spAll.map(s=>{const b=byId(s);return `<button class="${feedSpecies===s?'on':''}" onclick="Z.feedSp('${s}')">${b?esc(b.n):esc(s)}</button>`;}).join('')}${feedSpecies?'<button class="clr" onclick="Z.feedSp(\'\')">✕</button>':''}</div>` : '';
@@ -757,7 +757,7 @@ async function loadFeed(){
     box.innerHTML = lead + spChips + (list.length ? list.map(it=>feedCard(it, liked.has(it.id), me)).join('') : feedEmpty('Нет уловов по этому фильтру.'));
   }catch(e){ box.innerHTML=feedEmpty('Не удалось загрузить ленту. '+(e.message||'')); }
 }
-function feedEmpty(msg){ return `<div class="empty"><div class="ei">🎣</div><p>${esc(msg)}</p><button class="act" style="max-width:260px;border-color:var(--jade);color:var(--jade);margin:10px auto 0" onclick="Z.invite()">🎣 Позвать друзей — вместе интереснее</button></div>`; }
+function feedEmpty(msg, withInvite){ return `<div class="empty"><div class="ei">🎣</div><p>${esc(msg)}</p>${withInvite?`<button class="act" style="max-width:260px;border-color:var(--jade);color:var(--jade);margin:10px auto 0" onclick="Z.invite()">🎣 Позвать друзей — вместе интереснее</button>`:''}</div>`; }
 // одна карточка = один выезд (рыбалка) со списком рыбы
 // фото выезда: облачное (photo_url, видят все) → иначе локальное (только своё)
 function tripPhoto(it){
@@ -1353,7 +1353,7 @@ async function shareCatch(id){
   try {
     const blob = await makeCatchCard(e, ST.city ? ST.city.name : '');
     if (!blob) return;
-    const res = await shareCard(blob, 'ulov-zorka.png');
+    const res = await shareCard(blob, 'ulov-nakryuchke.png');
     if (res === 'saved') toast('Карточка сохранена — поделись ей из галереи 📤');
   } catch (err) { alert('Не удалось создать карточку: ' + (err && err.message || err)); }
 }
@@ -1420,7 +1420,6 @@ function delPlace(i){ if(confirm('Удалить место?')){ removePlace(i);
 
 // ── экспорт API для inline-обработчиков ──────────────────────────────────────
 export function initUI(){
-  Notify.ensureWelcome();
   if(typeof window!=='undefined' && window.addEventListener) window.addEventListener('beforeinstallprompt', e=>{ e.preventDefault(); deferredPrompt=e; });
   if(typeof window!=='undefined' && window.addEventListener) window.addEventListener('appinstalled', ()=>{ try{ Cloud.logEvent('install'); }catch(e){} });
   if(cloudEnabled()){ try{ Cloud.logEvent('app_open'); }catch(e){} }
