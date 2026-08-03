@@ -232,6 +232,7 @@ function renderForecast(){
       ${(fc.bestDay && fc.bestDay.name!=='Сегодня') ? `<div onclick="Z.openDay('${fc.bestDay.date||''}')" style="cursor:pointer;font-family:var(--font-serif);font-size:13.5px;color:var(--jade);margin:8px 0 2px">🏆 Лучший день — <b>${esc(fc.bestDay.name)}</b> · ${fc.bestDay.score.toFixed(1)}/5 ▸</div>` : `<div style="font-size:12.5px;color:var(--slate);margin:8px 0 2px">🏆 Лучший день — сегодня</div>`}
       <div class="days">${upHTML}</div>
       <button class="act" style="border-color:var(--brass);color:var(--brass)" onclick="Z.openMoon()">🌙 Лунный календарь на 2 недели</button>
+      <button class="act" style="border-color:var(--slate);color:var(--slate)" onclick="Z.openRegs()">🎣 Правила: нерест, нормы, размеры</button>
       <button class="act" style="border-color:var(--jade);color:var(--jade)" onclick="Z.shareForecast()">📤 Поделиться прогнозом</button>
       <div class="honesty">Прогноз строится на погоде, давлении, луне, воде и сезоне. Станет точнее, когда рыбаки начнут отмечать уловы — это уже заложено.</div>
       <div style="height:8px"></div>
@@ -547,6 +548,35 @@ async function feedbackSend(){
   try{ await Cloud.sendFeedback(msg, contact); try{ Cloud.logEvent('feedback'); }catch(e){} closeModal(); toast('Спасибо! Сообщение отправлено 🙌'); }
   catch(e){ toast('Не удалось отправить. Напиши на zorka.klyov@yandex.ru'); }
 }
+// 🎣 Правила рыболовства по региону — что сейчас можно/нельзя
+function openRegs(){
+  const zone = ST.city ? Regs.zoneOf(ST.city.name) : null;
+  const info = zone ? Regs.regionInfo(zone) : null;
+  const ban = zone ? Regs.activeBan(zone) : null;
+  if(!info){
+    openModal(`<h3>🎣 Правила рыболовства</h3>
+      <p style="font-size:13px;line-height:1.5">Для этого региона точной справки пока нет. Актуальные правила (нерест, нормы, размеры) смотри у своей рыбоохраны — территориальное управление Росрыболовства.</p>
+      ${ban?`<div class="regs-warn">⚠️ Ориентировочно сейчас нерестовый период (${ban.fromLabel}–${ban.toLabel}). ${esc(ban.rules||'')}</div>`:''}`);
+    return;
+  }
+  const b=info.ban;
+  const banStatus = (ban && !ban.generic) ? '<span class="regs-now">⚠️ ДЕЙСТВУЕТ СЕЙЧАС</span>' : '<span class="regs-ok">сейчас не действует</span>';
+  const sizes = info.minSizes.map(s=>{ const f=byId(s.sp); return `<span class="tg">${esc(f?f.n:s.sp)} — от ${s.cm} см</span>`; }).join('');
+  const banned = info.banned.map(x=>`<div class="regs-li">🚫 ${esc(x)}</div>`).join('');
+  openModal(`<h3>🎣 Правила рыболовства</h3>
+    <p style="font-size:11.5px;color:var(--slate);margin:2px 0 12px">${esc(info.name)}</p>
+    <div class="lbl">🚫 Нерестовый запрет ${banStatus}</div>
+    <div class="regs-li" style="margin-top:6px">Период: <b>${Regs && b ? (labelMDsafe(b.from)+'–'+labelMDsafe(b.to)) : '—'}</b></div>
+    <div class="regs-li" style="color:var(--slate)">${esc(b.rules)}</div>
+    <div class="lbl" style="margin-top:14px">⚖️ Норма вылова</div>
+    <div class="regs-li">${esc(info.dailyNorm)}</div>
+    <div class="lbl" style="margin-top:14px">📏 Минимальный размер (меньше — отпусти)</div>
+    <div class="tag-row">${sizes}</div>
+    <div class="lbl" style="margin-top:14px">🚫 Запрещено</div>
+    ${banned}
+    <p style="font-size:11.5px;color:var(--slate);margin-top:14px;line-height:1.5">⚠️ Это ориентир. Правила меняются, по конкретным водоёмам даты уточняет рыбоохрана. Источник: ${esc(info.source)}</p>`);
+}
+function labelMDsafe(md){ try{ const [m,d]=md.split('-').map(Number); return d+' '+MONTHS_GEN[m-1]; }catch(e){ return md; } }
 async function shareForecast(){
   if(!(ST.weather && ST.city)) return;
   let text='';
@@ -1413,7 +1443,7 @@ export function initUI(){
     tab, reload:()=>loadWeather(),
     filter:(f)=>{ ST.filter=f; saveSettings(); rerender(); },
     tf:(el)=>el.classList.toggle('open'),
-    openCity, searchCity, pickCity, cityPick, geo, closeModal, openNotif, shareForecast, onboardDone, openMoon, openDay, openConfidence, reportWater, clearNotifs, notifOpen, openWaters,
+    openCity, searchCity, pickCity, cityPick, geo, closeModal, openNotif, shareForecast, onboardDone, openMoon, openDay, openConfidence, openRegs, reportWater, clearNotifs, notifOpen, openWaters,
     openAccount, signIn: acSignIn, setPass: acSetPass, signOut: acSignOut, syncNow: acSyncNow, saveHandle: acSaveHandle, enablePush: acEnablePush, pushAllow, pushLater, install: promptInstall, invite:()=>{ try{ Cloud.logEvent('invite'); }catch(e){} inviteFriend(); }, tg:()=>{ try{ Cloud.logEvent('tg_click'); window.open('https://t.me/nakryuchke_rb','_blank','noopener'); }catch(e){} }, feedback: openFeedback, feedbackSend,
     like: feedLike, comments: openComments, sendComment, delComment, report: reportTrip, photoView, coTrips: openCoTrips, coNew: coTripNew, coSave: coTripSave, coJoin, coDel, feedMode:(m)=>{ feedFilter=m; rerender(); }, feedSp:(s)=>{ feedSpecies=(s&&s!==feedSpecies)?s:null; loadFeed(); }, where: openWhere,
     leaderPeriod:(p)=>{ leaderPeriod=p; const box=$('leadBox'); if(box && _feedCache) box.outerHTML=leaderBoxHTML(_feedCache); },

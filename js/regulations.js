@@ -35,6 +35,31 @@ const CITY_ZONE = {
   'Белорецк': 'bashkortostan', 'Мелеуз': 'bashkortostan', 'Кумертау': 'bashkortostan',
 };
 
+// полная справка по региону для карточки «что сейчас можно/нельзя».
+// ⚠️ Значения — ориентир по Волжско-Каспийскому бассейну; выверяются, уточняй у рыбоохраны.
+const REGION_INFO = {
+  bashkortostan: {
+    name: 'Башкортостан · Волжско-Каспийский бассейн',
+    ban: REGS.bashkortostan,
+    dailyNorm: 'Суточная норма вылова — 5 кг на человека (либо один экземпляр, если он тяжелее 5 кг).',
+    minSizes: [
+      { sp: 'zander', cm: 40 }, { sp: 'pike', cm: 32 }, { sp: 'bream', cm: 25 },
+      { sp: 'carp', cm: 40 }, { sp: 'catfish', cm: 90 }, { sp: 'asp', cm: 40 },
+      { sp: 'burbot', cm: 40 }, { sp: 'ide', cm: 25 }, { sp: 'bersh', cm: 25 },
+    ],
+    banned: [
+      'Сети (для рыбаков-любителей запрещены)',
+      'Электроудочка, ток',
+      'Взрывчатка, химия, отравляющие вещества',
+      'Острога, огнестрельное оружие по рыбе',
+      'Перекрытие русла, «экраны/телевизоры», вентери сверх нормы',
+      'В нерест — с лодки, спиннингом, снастями более чем с 2 крючками',
+    ],
+    source: 'Правила рыболовства Волжско-Каспийского бассейна (Приказ Минсельхоза РФ). Актуальное — в терр. управлении Росрыболовства по РБ.',
+  },
+};
+export function regionInfo(zone) { return REGION_INFO[zone] || null; }
+
 export const zoneOf = (cityName) => CITY_ZONE[cityName] || null;
 
 function mmdd(date) { return String(date.getMonth() + 1).padStart(2, '0') + '-' + String(date.getDate()).padStart(2, '0'); }
