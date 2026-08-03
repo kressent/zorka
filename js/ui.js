@@ -527,6 +527,22 @@ async function inviteFriend(){
   try{ await navigator.clipboard.writeText(text+' '+url); toast('Приглашение скопировано — вставь другу 📋'); }
   catch(e){ toast('Ссылка: '+url); }
 }
+// обратная связь разработчику → в базу (feedback), запасной путь — почта
+function openFeedback(){
+  openModal(`<h3>💬 Написать разработчику</h3>
+    <p style="font-size:12.5px;color:var(--slate);margin:2px 0 10px">Идея, баг, что улучшить, где прогноз мимо — пиши, я читаю всё. Можно анонимно.</p>
+    <div class="field"><textarea id="fb_msg" placeholder="Твоё сообщение…" style="min-height:110px"></textarea></div>
+    <div class="field"><input id="fb_contact" maxlength="200" placeholder="Как связаться (по желанию): телега/почта"></div>
+    <button class="act" onclick="Z.feedbackSend()">Отправить</button>
+    <a class="act" style="text-align:center;text-decoration:none;border-color:var(--slate);color:var(--slate);margin-top:8px;display:block" href="mailto:zorka.klyov@yandex.ru?subject=%D0%9E%D1%82%D0%B7%D1%8B%D0%B2%20%D0%9D%D0%B0%20%D0%BA%D1%80%D1%8E%D1%87%D0%BA%D0%B5">Или написать на почту</a>`);
+}
+async function feedbackSend(){
+  const msg=(($('fb_msg')&&$('fb_msg').value)||'').trim();
+  if(msg.length<3){ toast('Напиши сообщение'); return; }
+  const contact=(($('fb_contact')&&$('fb_contact').value)||'').trim();
+  try{ await Cloud.sendFeedback(msg, contact); try{ Cloud.logEvent('feedback'); }catch(e){} closeModal(); toast('Спасибо! Сообщение отправлено 🙌'); }
+  catch(e){ toast('Не удалось отправить. Напиши на zorka.klyov@yandex.ru'); }
+}
 async function shareForecast(){
   if(!(ST.weather && ST.city)) return;
   let text='';
@@ -900,6 +916,7 @@ async function openAccount(){
       <button class="act" style="border-color:var(--jade);color:var(--jade);margin-top:10px" onclick="Z.invite()">🎣 Позвать друга на рыбалку</button>
       <button class="act" style="margin-top:10px" onclick="Z.tg()">📢 Наш Telegram — прогноз каждое утро</button>
       <button class="act" style="border-color:var(--brass);color:var(--brass);margin-top:10px" onclick="Z.install()">📲 Установить на телефон</button>
+      <button class="act" style="border-color:var(--slate);color:var(--slate);margin-top:10px" onclick="Z.feedback()">💬 Написать разработчику</button>
       <details class="acc-more"><summary>Аккаунт и синхронизация</summary>
         <p style="font-size:13px;margin-top:8px">Вход выполнен: <b>${esc(user.email||'')}</b></p>
         <div class="field" style="margin-top:10px"><label>Сменить пароль (для входа на других устройствах)</label>
@@ -919,7 +936,8 @@ function accountEmailStep(){
     <div class="field"><label>Почта</label><input id="ac_email" type="email" inputmode="email" autocomplete="email" placeholder="you@mail.ru" value="${esc(authEmail)}"></div>
     <div class="field"><label>Пароль</label><input id="ac_pass" type="password" autocomplete="current-password" placeholder="минимум 6 символов"></div>
     <button class="act" onclick="Z.signIn()">Войти</button>
-    <button class="act" style="border-color:var(--brass);color:var(--brass);margin-top:10px" onclick="Z.install()">📲 Установить на телефон</button>`;
+    <button class="act" style="border-color:var(--brass);color:var(--brass);margin-top:10px" onclick="Z.install()">📲 Установить на телефон</button>
+    <button class="act" style="border-color:var(--slate);color:var(--slate);margin-top:10px" onclick="Z.feedback()">💬 Написать разработчику</button>`;
 }
 function errMsg(e){
   if(!e) return 'Неизвестная ошибка';
@@ -1173,6 +1191,7 @@ function saveEntry(){
   }
   const saved = draft;
   Diary.upsertEntry(saved); draft=null; invalidateFeed(); closeModal(); rerender(); Sync.pushSoon();
+  try{ if(cloudEnabled()) Cloud.logEvent('save_catch', {fish:(saved.catches||[]).length}); }catch(e){}
   // синхронизируем ленту: приватный улов — убрать из ленты, обычный — опубликовать
   if(cloudEnabled() && Cloud.cachedUser()){
     if(saved.private){
@@ -1262,6 +1281,8 @@ function delPlace(i){ if(confirm('Удалить место?')){ removePlace(i);
 export function initUI(){
   Notify.ensureWelcome();
   if(typeof window!=='undefined' && window.addEventListener) window.addEventListener('beforeinstallprompt', e=>{ e.preventDefault(); deferredPrompt=e; });
+  if(typeof window!=='undefined' && window.addEventListener) window.addEventListener('appinstalled', ()=>{ try{ Cloud.logEvent('install'); }catch(e){} });
+  if(cloudEnabled()){ try{ Cloud.logEvent('app_open'); }catch(e){} }
   if(typeof document!=='undefined' && document.body) setTimeout(maybeOnboard, 900);
   Sync.onSynced(() => rerender());
   if (cloudEnabled() && Cloud.cachedUser()) { Sync.syncOnLogin(); Cloud.ensureProfile().catch(()=>{}); setTimeout(checkEngagement, 1800); setTimeout(autoPush, 2000); setTimeout(maybePushPrompt, 2800); }
@@ -1287,7 +1308,7 @@ export function initUI(){
     filter:(f)=>{ ST.filter=f; saveSettings(); rerender(); },
     tf:(el)=>el.classList.toggle('open'),
     openCity, searchCity, pickCity, cityPick, geo, closeModal, openNotif, shareForecast, onboardDone, openMoon, openDay, openConfidence, reportWater, clearNotifs, notifOpen, openWaters,
-    openAccount, signIn: acSignIn, setPass: acSetPass, signOut: acSignOut, syncNow: acSyncNow, saveHandle: acSaveHandle, enablePush: acEnablePush, pushAllow, pushLater, install: promptInstall, invite: inviteFriend, tg:()=>{ try{ window.open('https://t.me/nakryuchke_rb','_blank','noopener'); }catch(e){} },
+    openAccount, signIn: acSignIn, setPass: acSetPass, signOut: acSignOut, syncNow: acSyncNow, saveHandle: acSaveHandle, enablePush: acEnablePush, pushAllow, pushLater, install: promptInstall, invite:()=>{ try{ Cloud.logEvent('invite'); }catch(e){} inviteFriend(); }, tg:()=>{ try{ Cloud.logEvent('tg_click'); window.open('https://t.me/nakryuchke_rb','_blank','noopener'); }catch(e){} }, feedback: openFeedback, feedbackSend,
     like: feedLike, comments: openComments, sendComment, delComment, report: reportTrip, feedMode:(m)=>{ feedFilter=m; rerender(); }, feedSp:(s)=>{ feedSpecies=(s&&s!==feedSpecies)?s:null; loadFeed(); }, where: openWhere,
     leaderPeriod:(p)=>{ leaderPeriod=p; const box=$('leadBox'); if(box && _feedCache) box.outerHTML=leaderBoxHTML(_feedCache); },
     waterProfile: openWaterProfile,

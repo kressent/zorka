@@ -235,6 +235,41 @@ export async function reportCounts(ids) {
   } catch (e) { return {}; }
 }
 
+// ── обратная связь + аналитика (устойчивы к «миграция 023 ещё не прогнана») ──
+export async function sendFeedback(message, contact) {
+  const c = await client(); if (!c) throw new Error('Облако не настроено');
+  const u = await currentUser().catch(() => null);
+  const { error } = await c.from('feedback').insert({
+    message: String(message).slice(0, 4000), contact: contact ? String(contact).slice(0, 200) : null,
+    user_id: u ? u.id : null,
+  });
+  if (error) throw error;
+  return true;
+}
+
+// анонимный id сессии (не личность) — чтобы считать «заходы», а не только события
+let _session = null;
+function sessionId() {
+  if (_session) return _session;
+  try { _session = localStorage.getItem('zorka_sid'); } catch (e) {}
+  if (!_session) {
+    _session = Math.random().toString(36).slice(2) + Date.now().toString(36);
+    try { localStorage.setItem('zorka_sid', _session); } catch (e) {}
+  }
+  return _session;
+}
+
+// залогировать событие (fire-and-forget, молча падает — аналитика не должна мешать)
+export async function logEvent(name, meta) {
+  try {
+    if (!name) return;
+    const c = await client(); if (!c) return;
+    const u = await currentUser().catch(() => null);
+    await c.from('events').insert({ name: String(name).slice(0, 40), meta: meta || null,
+      user_id: u ? u.id : null, session: sessionId() }).then(() => {}, () => {});
+  } catch (e) { /* тихо */ }
+}
+
 // ── профиль рыбака: ник + рейтинг (очки/ранг считает вью angler_stats) ──
 function genHandle() {
   // нейтральный ник по умолчанию (без утечки почты); рыбак сам переименует
