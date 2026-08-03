@@ -27,6 +27,7 @@ import { nearbySignal, calibrate } from './calibrate.js';
 import { refWaters, refWhere, inRefRegion } from './waterref.js';
 import { suggestSpecies } from './suggest.js';
 import { personalRecords, fishingYear } from './records.js';
+import { forecastAccuracy } from './forecastAccuracy.js';
 import { achievements } from './achievements.js';
 import { forecastPost } from './postgen.js';
 import { cloudEnabled, CONFIG } from './config.js';
@@ -256,7 +257,7 @@ function renderDiary(){
     return `<div class="entry">
       <div class="ed"><span class="dt">${d.getDate()} ${MONTHS_GEN[d.getMonth()]}, ${DOW[d.getDay()].toLowerCase()}${e.private?' <span title="только для тебя">🔒</span>':''}</span>
         <span class="st">${'★'.repeat(e.rating||0)}${'☆'.repeat(5-(e.rating||0))}</span></div>
-      ${(e.spot||e.forecast)?`<div class="em">${e.spot?`<span class="mchip">${esc(e.spot)}</span>`:''}${e.forecast?`<span class="mchip">${e.forecast.avgP||''} мм</span><span class="mchip">${e.forecast.maxT}°</span>`:''}</div>`:''}
+      ${(e.spot||e.forecast)?`<div class="em">${e.spot?`<span class="mchip">${esc(e.spot)}</span>`:''}${e.forecast?`${e.forecast.score!=null?`<span class="mchip">🔮 ${Number(e.forecast.score).toFixed(1)}/5</span>`:''}<span class="mchip">${e.forecast.avgP||''} мм</span><span class="mchip">${e.forecast.maxT}°</span>`:''}</div>`:''}
       ${cnt?`<div class="catchlist">${catches}<div class="cl tot"><span class="cn">Итого · ${cnt} ${cnt===1?'рыба':'рыб'}</span><span class="cw">${w?fmtW(w):'—'}</span></div></div>`
            :(e.visited?`<div style="font-size:12.5px;color:var(--slate);margin-top:8px">Был на рыбалке, без улова</div>`:'')}
       ${e.groundbait?`<div class="en" style="font-style:normal;color:var(--slate)">🥣 Прикормка: ${esc(e.groundbait)}</div>`:''}
@@ -574,8 +575,14 @@ function openRecords(){
     <div class="rec-line">📅 Дней на воде: <b>${r.days}</b> · всего <b>${(r.totalG/1000).toFixed(1)} кг</b></div>`;
   const trophies = Object.entries(r.biggest).filter(([sp,b])=>isTrophy(sp,b.weight));
   const troHTML = trophies.length ? `<div class="lbl" style="margin-top:16px">🏆 Твои трофеи</div><div class="tag-row">${trophies.map(([sp,b])=>`<span class="tg real">${esc((byId(sp)||{}).n||sp)} ${fmtW(b.weight)}</span>`).join('')}</div>` : '';
+  const acc = forecastAccuracy(entries);
+  const accHTML = acc.enough
+    ? `<div class="lbl" style="margin-top:16px">🔮 Сбываемость прогноза</div>
+       <div class="rec-line">В сильные дни (4+) ловилось в среднем <b>${acc.goodAvg}</b> рыб, в слабые (2−) — <b>${acc.weakAvg}</b>.</div>
+       <div class="rec-line" style="color:${acc.works?'var(--jade)':'var(--slate)'}">${acc.works?'Прогноз сбывается — твои уловы это подтверждают ✅':'Пока прогноз не подтверждается — веди дневник дальше, посмотрим на большем.'}</div>`
+    : `<div class="lbl" style="margin-top:16px">🔮 Сбываемость прогноза</div><div class="rec-line" style="color:var(--slate)">Появится, когда наберётся ~6 записей с прогнозом. Веди дневник — и увидишь, сбывается ли прогноз лично у тебя.</div>`;
   const achHTML = ach.map(a=>`<div class="ach${a.done?' on':''}"><span class="ach-i">${a.icon}</span><span class="ach-n">${esc(a.name)}</span><span class="ach-p">${a.done?'✓':a.cur+'/'+a.need}</span></div>`).join('');
-  openModal(`<h3>🏆 Рекорды и достижения</h3>${recHTML}${troHTML}
+  openModal(`<h3>🏆 Рекорды и достижения</h3>${recHTML}${troHTML}${accHTML}
     <div class="lbl" style="margin-top:16px">Достижения · ${done}/${ach.length}</div>
     <div class="ach-grid">${achHTML}</div>
     <button class="act" style="margin-top:16px;border-color:var(--brass);color:var(--brass)" onclick="Z.openYear()">🗓 Твой рыболовный год →</button>
