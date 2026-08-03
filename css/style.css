@@ -395,6 +395,7 @@ button{font-family:inherit}
 .feed-card .fc-actions .like-btn{margin-top:0}
 .cm-btn{background:none;border:1px solid var(--line);color:var(--slate);font:inherit;font-size:12.5px;padding:5px 12px;border-radius:99px;cursor:pointer;display:inline-flex;align-items:center;gap:5px}
 .cm-btn .cc{font-family:var(--font-mono);font-weight:700}
+.fc-thumb{float:right;width:78px;height:78px;object-fit:cover;margin:0 0 6px 10px;cursor:pointer;border:1px solid var(--line);clip-path:polygon(7px 0,100% 0,100% 100%,0 100%,0 7px)}
 .fc-spacer{flex:1}
 .cotrip{border:1px solid var(--line);background:var(--card);padding:11px 13px;margin-bottom:10px;clip-path:polygon(9px 0,100% 0,100% 100%,0 100%,0 9px)}
 .cotrip .ct-head{display:flex;align-items:baseline;justify-content:space-between;gap:10px}

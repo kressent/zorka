@@ -127,7 +127,21 @@ async function insertCatchesResilient(c, rows) {
 }
 
 // ── сообщество: публикация уловов, лента, лайки ──
-export async function publishCatches(entry, waterName, coords) {
+// загрузить фото улова в облако (публичный бакет) → вернуть публичный URL | null
+export async function uploadCatchPhoto(entryId, dataUrl) {
+  try {
+    const c = await client(); const u = await currentUser();
+    if (!c || !u || !dataUrl) return null;
+    const blob = await (await fetch(dataUrl)).blob();
+    const path = `${u.id}/${entryId}.jpg`;
+    const { error } = await c.storage.from('catch-photos').upload(path, blob, { upsert: true, contentType: 'image/jpeg' });
+    if (error) { console.warn('photo upload:', error.message); return null; }
+    const { data } = c.storage.from('catch-photos').getPublicUrl(path);
+    return (data && data.publicUrl) || null;
+  } catch (e) { return null; }
+}
+
+export async function publishCatches(entry, waterName, coords, photoUrl) {
   const c = await client(); if (!c) return; const u = await currentUser(); if (!u) return;
   // всегда сперва убираем прошлые строки этой записи — так правки и удаления
   // улова синхронизируются с лентой (даже если рыбу из записи убрали совсем)
@@ -150,6 +164,7 @@ export async function publishCatches(entry, waterName, coords) {
     lon: (coords && coords.lon) || null,
     conditions: entry.forecast || null,
     forecast_score: (entry.forecast && entry.forecast.score != null) ? entry.forecast.score : null,
+    photo_url: photoUrl || null,
     is_public: true,
   }));
   await insertCatchesResilient(c, rows);

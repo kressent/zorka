@@ -721,6 +721,16 @@ async function loadFeed(){
 }
 function feedEmpty(msg){ return `<div class="empty"><div class="ei">🎣</div><p>${esc(msg)}</p><button class="act" style="max-width:260px;border-color:var(--jade);color:var(--jade);margin:10px auto 0" onclick="Z.invite()">🎣 Позвать друзей — вместе интереснее</button></div>`; }
 // одна карточка = один выезд (рыбалка) со списком рыбы
+// фото выезда: облачное (photo_url, видят все) → иначе локальное (только своё)
+function tripPhoto(it){
+  if(it && it.photo_url) return it.photo_url;
+  try{ const parts=String((it&&it.id)||'').split(':'); const eid=parts.length>1?parts.slice(1).join(':'):parts[0]; return getPhoto(eid); }catch(e){ return null; }
+}
+function photoView(tripKey){
+  const it=(_feedCache||[]).find(x=>x.id===tripKey);
+  const p=it?tripPhoto(it):tripPhoto({id:tripKey}); if(!p) return;
+  openModal(`<img src="${esc(p)}" alt="фото улова" style="width:100%;display:block">`);
+}
 function feedCard(it, mine, myId){
   const d=it.caught_at?new Date(it.caught_at):null;
   const dl=d?`${d.getDate()} ${MONTHS_GEN[d.getMonth()]}`:'';
@@ -739,8 +749,11 @@ function feedCard(it, mine, myId){
     : `<button class="like-btn${mine?' on':''}" onclick="Z.like('${it.id}',this)">❤ <span class="lc">${it.likes||0}</span></button>`;
   const cm = `<button class="cm-btn" onclick="Z.comments('${it.id}')">💬 <span class="cc">${it.comments||0}</span></button>`;
   const rep = isMine ? '' : `<button class="rep-btn" onclick="Z.report('${it.id}')" title="Пожаловаться на фейк/спам">🚩</button>`;
+  const ph = tripPhoto(it);
+  const thumb = ph ? `<img class="fc-thumb" src="${ph}" onclick="Z.photoView('${it.id}')" alt="фото улова" loading="lazy">` : '';
   return `<div class="feed-card">
     ${who}
+    ${thumb}
     ${head}
     <div class="tc-list">${rows||'<div class="tc-fish"><span class="tc-fn" style="color:var(--slate)">Был на рыбалке</span></div>'}</div>
     ${sc?`<div class="fc-badges">${sc}</div>`:''}
@@ -1286,7 +1299,9 @@ function saveEntry(){
       Cloud.unpublishEntry(saved.id).then(()=>toast('Сохранено, в ленту не попало 🔒')).catch(e=>console.warn('unpublish:',e));
     } else {
       const coords = (saved.lat!=null&&saved.lon!=null) ? {lat:saved.lat,lon:saved.lon} : (ST.city?{lat:ST.city.lat,lon:ST.city.lon}:{});
-      Cloud.publishCatches(saved, ST.city?ST.city.name:'', coords)
+      // фото публичного улова — в облако, чтобы его видели все в ленте
+      const up = (photo && (saved.catches||[]).length) ? Cloud.uploadCatchPhoto(saved.id, photo).catch(()=>null) : Promise.resolve(null);
+      up.then(url => Cloud.publishCatches(saved, ST.city?ST.city.name:'', coords, url))
         .then(()=>{ invalidateFeed(); if((saved.catches||[]).length) toast('Улов в ленте 🎣'); })
         .catch(e=>{ console.warn('publish:',e); toast('Лента не приняла: '+(e.message||e)); });
     }
@@ -1400,7 +1415,7 @@ export function initUI(){
     tf:(el)=>el.classList.toggle('open'),
     openCity, searchCity, pickCity, cityPick, geo, closeModal, openNotif, shareForecast, onboardDone, openMoon, openDay, openConfidence, reportWater, clearNotifs, notifOpen, openWaters,
     openAccount, signIn: acSignIn, setPass: acSetPass, signOut: acSignOut, syncNow: acSyncNow, saveHandle: acSaveHandle, enablePush: acEnablePush, pushAllow, pushLater, install: promptInstall, invite:()=>{ try{ Cloud.logEvent('invite'); }catch(e){} inviteFriend(); }, tg:()=>{ try{ Cloud.logEvent('tg_click'); window.open('https://t.me/nakryuchke_rb','_blank','noopener'); }catch(e){} }, feedback: openFeedback, feedbackSend,
-    like: feedLike, comments: openComments, sendComment, delComment, report: reportTrip, coTrips: openCoTrips, coNew: coTripNew, coSave: coTripSave, coJoin, coDel, feedMode:(m)=>{ feedFilter=m; rerender(); }, feedSp:(s)=>{ feedSpecies=(s&&s!==feedSpecies)?s:null; loadFeed(); }, where: openWhere,
+    like: feedLike, comments: openComments, sendComment, delComment, report: reportTrip, photoView, coTrips: openCoTrips, coNew: coTripNew, coSave: coTripSave, coJoin, coDel, feedMode:(m)=>{ feedFilter=m; rerender(); }, feedSp:(s)=>{ feedSpecies=(s&&s!==feedSpecies)?s:null; loadFeed(); }, where: openWhere,
     leaderPeriod:(p)=>{ leaderPeriod=p; const box=$('leadBox'); if(box && _feedCache) box.outerHTML=leaderBoxHTML(_feedCache); },
     waterProfile: openWaterProfile,
     newEntry, editEntry, addCatch, rmCatch, setW, setLure, lureCustom, setRating, setPrivate, setDate, pickEntryLoc, entryBack, clearEntryLoc, entryLocSearch, entryLocGo, entryPhoto, rmEntryPhoto, saveEntry, delEntry, shareCatch, openRecords, openYear, shareYear, exportDiary, importDiary,
