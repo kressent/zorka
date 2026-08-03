@@ -1363,7 +1363,10 @@ export function initUI(){
   // deep-link из пуш-уведомления: ?c=<tripKey> → открыть комментарии выезда
   const _openDeep = (str)=>{ try{ const m=/[?&]c=([^&]+)/.exec(str||''); if(m){ const k=decodeURIComponent(m[1]); ST.tab='feed'; rerender(); setTimeout(()=>{ try{ openComments(k); }catch(e){} }, 500); } }catch(e){} };
   if (typeof window!=='undefined' && window.location && window.location.search) {
-    _openDeep(window.location.search);
+    const q=window.location.search;
+    // ?owner=1 — пометить это устройство как «владелец» (не считать в статистике); ?owner=0 — снять
+    try{ const m=/[?&]owner=([01])/.exec(q); if(m){ if(m[1]==='1'){ localStorage.setItem('zorka_owner','1'); setTimeout(()=>toast('Это устройство исключено из статистики 🙈'),400);} else { localStorage.removeItem('zorka_owner'); setTimeout(()=>toast('Устройство снова считается в статистике'),400);} } }catch(e){}
+    _openDeep(q);
     try{ history.replaceState(null,'',window.location.pathname); }catch(e){}
   }
   if (typeof navigator!=='undefined' && navigator.serviceWorker && navigator.serviceWorker.addEventListener) {

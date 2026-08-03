@@ -308,6 +308,7 @@ function sessionId() {
 export async function logEvent(name, meta) {
   try {
     if (!name) return;
+    try { if (localStorage.getItem('zorka_owner')) return; } catch (e) {}  // устройства владельца не считаем
     const c = await client(); if (!c) return;
     const u = await currentUser().catch(() => null);
     await c.from('events').insert({ name: String(name).slice(0, 40), meta: meta || null,
