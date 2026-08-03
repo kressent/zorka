@@ -396,6 +396,12 @@ button{font-family:inherit}
 .cm-btn{background:none;border:1px solid var(--line);color:var(--slate);font:inherit;font-size:12.5px;padding:5px 12px;border-radius:99px;cursor:pointer;display:inline-flex;align-items:center;gap:5px}
 .cm-btn .cc{font-family:var(--font-mono);font-weight:700}
 .fc-spacer{flex:1}
+.cotrip{border:1px solid var(--line);background:var(--card);padding:11px 13px;margin-bottom:10px;clip-path:polygon(9px 0,100% 0,100% 100%,0 100%,0 9px)}
+.cotrip .ct-head{display:flex;align-items:baseline;justify-content:space-between;gap:10px}
+.cotrip .ct-head b{font-family:var(--font-serif);font-size:15.5px}
+.cotrip .ct-date{font-family:var(--font-mono);font-size:11.5px;color:var(--brass);white-space:nowrap}
+.cotrip .ct-meta{font-family:var(--font-mono);font-size:11px;color:var(--slate);margin-top:3px}
+.cotrip .ct-note{font-size:13px;color:var(--ink);margin-top:6px;line-height:1.4}
 .rep-btn{background:none;border:1px solid var(--line);color:var(--slate);font:inherit;font-size:12.5px;padding:5px 10px;border-radius:99px;cursor:pointer;opacity:.6}
 .rep-btn:hover{opacity:1;border-color:var(--bad);color:var(--bad)}
 /* 🏆 Улов недели */

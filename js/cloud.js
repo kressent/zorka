@@ -235,6 +235,51 @@ export async function reportCounts(ids) {
   } catch (e) { return {}; }
 }
 
+// ── совместные выезды («напарники») ──
+export async function createCoTrip({ place, date, note }) {
+  const c = await client(); const u = await currentUser(); if (!c || !u) throw new Error('Войди в аккаунт');
+  const handle = await ensureProfile().catch(() => null);
+  const row = { user_id: u.id, handle: handle || 'Рыбак', place: String(place).slice(0, 120),
+    trip_date: date || null, note: note ? String(note).slice(0, 300) : null };
+  const { error } = await c.from('co_trips').insert(row);
+  if (error) throw error;
+  return true;
+}
+export async function fetchCoTrips() {
+  try {
+    const c = await client(); if (!c) return [];
+    const today = new Date().toISOString().slice(0, 10);
+    // предстоящие (дата не задана или сегодня и позже), свежие сверху
+    const { data } = await c.from('co_trips_view').select('*')
+      .or(`trip_date.gte.${today},trip_date.is.null`).order('trip_date', { ascending: true }).limit(50);
+    return data || [];
+  } catch (e) { return []; }
+}
+export async function myCoJoins(ids) {
+  try {
+    const c = await client(); const u = await currentUser();
+    if (!c || !u || !ids.length) return new Set();
+    const { data } = await c.from('co_joins').select('trip_id').eq('user_id', u.id).in('trip_id', ids);
+    return new Set((data || []).map(r => r.trip_id));
+  } catch (e) { return new Set(); }
+}
+export async function joinCoTrip(tripId, on) {
+  const c = await client(); const u = await currentUser(); if (!c || !u) throw new Error('Войди в аккаунт');
+  if (on) {
+    const handle = await ensureProfile().catch(() => null);
+    const { error } = await c.from('co_joins').insert({ trip_id: tripId, user_id: u.id, handle: handle || 'Рыбак' });
+    if (error && !String(error.message || '').toLowerCase().includes('duplicate')) throw error;
+  } else {
+    const { error } = await c.from('co_joins').delete().eq('trip_id', tripId).eq('user_id', u.id);
+    if (error) throw error;
+  }
+}
+export async function deleteCoTrip(tripId) {
+  const c = await client(); const u = await currentUser(); if (!c || !u) throw new Error('Войди в аккаунт');
+  const { error } = await c.from('co_trips').delete().eq('id', tripId).eq('user_id', u.id);
+  if (error) throw error;
+}
+
 // ── обратная связь + аналитика (устойчивы к «миграция 023 ещё не прогнана») ──
 export async function sendFeedback(message, contact) {
   const c = await client(); if (!c) throw new Error('Облако не настроено');

@@ -671,6 +671,7 @@ function renderFeed(){
   const btn=(m,l)=>`<button class="${feedFilter===m?'on':''}" onclick="Z.feedMode('${m}')">${l}</button>`;
   return `<div class="pad"><div class="mast"><span class="t">Лента уловов</span><span class="d">от рыбаков</span></div>
     <p class="honesty" style="border:none;padding-top:8px;margin-top:8px">Реальные уловы рыбаков. Ставь ❤️ и смотри, что и на что берёт. Чем больше нас — тем точнее прогноз. Места показываются огрублённо.</p>
+    <button class="act" style="border-color:var(--brass);color:var(--brass);margin:2px 0 4px" onclick="Z.coTrips()">🚗 Совместные выезды — кто с кем на рыбалку</button>
     <div class="feed-modes">${btn('all','Все')}${btn('near','📍 Рядом')}${btn('mine','Мои')}</div>
     <div id="feedBody"><div class="center" style="min-height:180px"><div class="loader"></div></div></div><div style="height:10px"></div></div>`;
 }
@@ -744,6 +745,62 @@ function feedCard(it, mine, myId){
     <div class="fc-actions">${like}${cm}${rep?`<span class="fc-spacer"></span>${rep}`:''}</div>
   </div>`;
 }
+// ── 🚗 совместные выезды («напарники») ──
+async function openCoTrips(){
+  openModal(`<h3>🚗 Совместные выезды</h3><div class="center" style="min-height:120px"><div class="loader"></div></div>`);
+  const me = Cloud.cachedUser() ? await Cloud.currentUserId() : null;
+  let trips=[]; try{ trips=await Cloud.fetchCoTrips(); }catch(e){}
+  const joined = me ? await Cloud.myCoJoins(trips.map(t=>t.id)) : new Set();
+  const s=document.querySelector('#modal .sheet'); if(!s) return;
+  const rows = trips.length ? trips.map(t=>coTripCard(t, joined.has(t.id), me)).join('')
+    : `<p style="font-size:13px;color:var(--slate);margin-top:10px">Пока никто не собрался. Будь первым — предложи выезд, и к тебе присоединятся 🎣</p>`;
+  s.innerHTML=`<button class="close" onclick="Z.closeModal()">✕</button><h3>🚗 Совместные выезды</h3>
+    <p style="font-size:12px;color:var(--slate);margin:2px 0 10px">«Еду туда-то, кто со мной?» С компанией — безопаснее и веселее. Связаться можно в ленте или личке.</p>
+    <button class="act" style="border-color:var(--jade);color:var(--jade)" onclick="Z.coNew()">➕ Собираюсь на рыбалку</button>
+    <div style="margin-top:12px">${rows}</div>`;
+}
+function coTripCard(t, going, myId){
+  const d=t.trip_date?new Date(t.trip_date+'T12:00:00'):null;
+  const dl=d?`${d.getDate()} ${MONTHS_GEN[d.getMonth()]}`:'дата не указана';
+  const isMine = myId && t.user_id===myId;
+  const btn = isMine
+    ? `<button class="act" style="margin:0;padding:6px 12px;border-color:var(--bad);color:var(--bad);font-size:12px" onclick="Z.coDel(${t.id})">Удалить</button>`
+    : `<button class="act" style="margin:0;padding:6px 14px;font-size:12.5px;border-color:var(--jade);color:${going?'var(--paper)':'var(--jade)'};background:${going?'var(--jade)':'transparent'}" onclick="Z.coJoin(${t.id},this)">${going?'✓ Еду':'Я поеду'}</button>`;
+  return `<div class="cotrip">
+    <div class="ct-head"><b>${esc(t.place)}</b><span class="ct-date">${dl}</span></div>
+    <div class="ct-meta">${esc(t.handle||'Рыбак')}${isMine?' · твой выезд':''} · 🎣 ${t.joins||0} ${(t.joins||0)===1?'едет':'едут'}</div>
+    ${t.note?`<div class="ct-note">${esc(t.note)}</div>`:''}
+    <div style="margin-top:8px">${btn}</div>
+  </div>`;
+}
+function coTripNew(){
+  if(!Cloud.cachedUser()){ toast('Войди в аккаунт, чтобы предложить выезд'); openAccount(); return; }
+  openModal(`<button class="close" onclick="Z.coTrips()">✕</button><h3>🚗 Собираюсь на рыбалку</h3>
+    <div class="field"><label>Куда — водоём/место</label><input id="ct_place" maxlength="120" placeholder="напр. Павловское вдхр, у Красной Горки"></div>
+    <div class="field"><label>Когда</label><input type="date" id="ct_date" min="${new Date().toISOString().slice(0,10)}"></div>
+    <div class="field"><label>Комментарий (по желанию)</label><textarea id="ct_note" maxlength="300" placeholder="во сколько, на что ловим, сколько мест в машине…"></textarea></div>
+    <button class="act" onclick="Z.coSave()">Опубликовать выезд</button>`);
+}
+async function coTripSave(){
+  const place=(($('ct_place')&&$('ct_place').value)||'').trim();
+  if(place.length<2){ toast('Укажи место'); return; }
+  const date=($('ct_date')&&$('ct_date').value)||'';
+  const note=(($('ct_note')&&$('ct_note').value)||'').trim();
+  try{ await Cloud.createCoTrip({place,date,note}); try{Cloud.logEvent('cotrip_new');}catch(e){} openCoTrips(); toast('Выезд опубликован 🚗'); }
+  catch(e){ toast('Не удалось: '+(e.message||e)); }
+}
+async function coJoin(id,btn){
+  if(!Cloud.cachedUser()){ toast('Войди, чтобы присоединиться'); openAccount(); return; }
+  const on=btn.textContent.indexOf('✓')<0;
+  try{ await Cloud.joinCoTrip(id,on); openCoTrips(); }
+  catch(e){ toast('Не удалось: '+(e.message||e)); }
+}
+async function coDel(id){
+  if(!confirm('Удалить твой выезд?')) return;
+  try{ await Cloud.deleteCoTrip(id); openCoTrips(); }
+  catch(e){ toast('Не удалось: '+(e.message||e)); }
+}
+
 // 🏆 Лидерборд с переключателем периода (неделя/месяц/сезон)
 const PERIOD_BTN = { week:'Неделя', month:'Месяц', season:'Сезон' };
 function leaderBoxHTML(items){
@@ -1318,7 +1375,7 @@ export function initUI(){
     tf:(el)=>el.classList.toggle('open'),
     openCity, searchCity, pickCity, cityPick, geo, closeModal, openNotif, shareForecast, onboardDone, openMoon, openDay, openConfidence, reportWater, clearNotifs, notifOpen, openWaters,
     openAccount, signIn: acSignIn, setPass: acSetPass, signOut: acSignOut, syncNow: acSyncNow, saveHandle: acSaveHandle, enablePush: acEnablePush, pushAllow, pushLater, install: promptInstall, invite:()=>{ try{ Cloud.logEvent('invite'); }catch(e){} inviteFriend(); }, tg:()=>{ try{ Cloud.logEvent('tg_click'); window.open('https://t.me/nakryuchke_rb','_blank','noopener'); }catch(e){} }, feedback: openFeedback, feedbackSend,
-    like: feedLike, comments: openComments, sendComment, delComment, report: reportTrip, feedMode:(m)=>{ feedFilter=m; rerender(); }, feedSp:(s)=>{ feedSpecies=(s&&s!==feedSpecies)?s:null; loadFeed(); }, where: openWhere,
+    like: feedLike, comments: openComments, sendComment, delComment, report: reportTrip, coTrips: openCoTrips, coNew: coTripNew, coSave: coTripSave, coJoin, coDel, feedMode:(m)=>{ feedFilter=m; rerender(); }, feedSp:(s)=>{ feedSpecies=(s&&s!==feedSpecies)?s:null; loadFeed(); }, where: openWhere,
     leaderPeriod:(p)=>{ leaderPeriod=p; const box=$('leadBox'); if(box && _feedCache) box.outerHTML=leaderBoxHTML(_feedCache); },
     waterProfile: openWaterProfile,
     newEntry, editEntry, addCatch, rmCatch, setW, setLure, lureCustom, setRating, setPrivate, setDate, pickEntryLoc, entryBack, clearEntryLoc, entryLocSearch, entryLocGo, saveEntry, delEntry, shareCatch, openRecords, openYear, shareYear, exportDiary, importDiary,
