@@ -24,6 +24,7 @@ import { summarizeWater, WATER_STATES } from './water.js';
 import { nearbyCatches, whereSpecies } from './nearby.js';
 import { clusterWaters, waterProfile } from './waterbodies.js';
 import { nearbySignal, calibrate } from './calibrate.js';
+import { learnSignal, blendForecast, learnWeight } from './learn.js';
 import { refWaters, refWhere, inRefRegion } from './waterref.js';
 import { suggestSpecies } from './suggest.js';
 import { personalRecords, fishingYear } from './records.js';
@@ -156,9 +157,14 @@ function renderForecast(){
   const bands = fc.windows.map(([a,b])=>`<div class="band" style="left:${a/24*100}%;width:${(b-a)/24*100}%"></div>`).join('');
   const winLabel = fc.bestWindows[0] ? `◆ окно ${fc.bestWindows.join(', ')}` : '◆ ровный день';
 
-  // калибровка «обучением»: подтверждаем прогноз реальными уловами сообщества рядом
+  // обучение на данных: подмешиваем статистику реальных уловов (вес растёт с объёмом)
+  const _lmonth = new Date().getMonth()+1;
+  const lsig = (cloudEnabled() && ST.city) ? learnSignal(_feedCache||[], {lat:ST.city.lat, lon:ST.city.lon, month:_lmonth}) : null;
+  const learnW = lsig ? learnWeight(lsig.total) : 0;
+  const baseFish = lsig ? blendForecast(fc.fish, lsig) : fc.fish;
+  // калибровка: подтверждаем прогноз реальными уловами сообщества рядом (метка «✓ ловят рядом»)
   const sig = (cloudEnabled() && ST.city) ? nearbySignal(_feedCache||[], ST.city.lat, ST.city.lon, {}) : null;
-  const fishList = sig ? calibrate(fc.fish, sig) : fc.fish;
+  const fishList = sig ? calibrate(baseFish, sig) : baseFish;
   const fishHTML = fishList.map(f=>{
     const lure = f.sc===0 ? (f.factors[0]?f.factors[0].tx:'не клюёт') : f.lr[0];
     const spawn = f.sc===0 && f.factors[0] && f.factors[0].tx.startsWith('нерест');
@@ -234,7 +240,7 @@ function renderForecast(){
       <button class="act" style="border-color:var(--brass);color:var(--brass)" onclick="Z.openMoon()">🌙 Лунный календарь на 2 недели</button>
       <button class="act" style="border-color:var(--slate);color:var(--slate)" onclick="Z.openRegs()">🎣 Правила: нерест, нормы, размеры</button>
       <button class="act" style="border-color:var(--jade);color:var(--jade)" onclick="Z.shareForecast()">📤 Поделиться прогнозом</button>
-      <div class="honesty">Прогноз строится на погоде, давлении, луне, воде и сезоне. Станет точнее, когда рыбаки начнут отмечать уловы — это уже заложено.</div>
+      <div class="honesty">${(learnW>=0.05 && lsig)?`📊 Прогноз уже уточнён по <b>${lsig.total}</b> реальным уловам рядом (вклад данных ~${Math.round(learnW*100)}%). Дальше — только точнее.`:'Прогноз строится на погоде, давлении, луне, воде и сезоне. Станет точнее, когда рыбаки начнут отмечать уловы — это уже заложено.'}</div>
       <div style="height:8px"></div>
     </div>`;
 }
