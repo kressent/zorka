@@ -2,39 +2,71 @@
 <html lang="ru">
 <head>
 <meta charset="utf-8">
-<title>ВК-обложка — На крючке</title>
+<title>ВК-обложка — На крючке (скачать PNG)</title>
 <style>
-  :root{--paper:#EFE9DB;--ink:#10322D;--jade:#2C6E5A;--brass:#C58A2E;--slate:#5C6E64;--line:#D8CFBA;
-    --serif:Georgia,"Times New Roman",serif;--mono:ui-monospace,"SF Mono",Menlo,monospace}
-  *{margin:0;padding:0;box-sizing:border-box}
-  body{background:#888;display:flex;align-items:center;justify-content:center;min-height:100vh;font-family:var(--serif)}
-  .hint{position:fixed;top:8px;left:8px;background:#fff;border:1px solid #bbb;border-radius:6px;padding:8px 12px;font:13px sans-serif;color:#333;max-width:640px}
-  /* Обложка ВК: 1590×400 (десктоп). Скриншоть ровно этот прямоугольник. */
-  .cover{width:1590px;height:400px;background:var(--paper);color:var(--ink);position:relative;overflow:hidden;
-    background-image:radial-gradient(120% 120% at 78% -20%,rgba(44,110,90,.20),transparent 55%);
-    display:flex;flex-direction:column;justify-content:center;padding:0 90px}
-  .brand{font-family:var(--mono);font-size:17px;letter-spacing:.32em;text-transform:uppercase;color:var(--brass);font-weight:700}
-  h1{font-size:104px;line-height:.98;font-weight:700;letter-spacing:-.01em;margin:10px 0 6px}
-  .sub{font-style:italic;font-size:30px;color:var(--slate)}
-  .tag{margin-top:14px;font-family:var(--mono);font-size:18px;letter-spacing:.02em;color:var(--jade)}
-  .wave{position:absolute;left:0;right:0;bottom:-2px;width:100%;height:70px;color:var(--jade);opacity:.5}
-  .fish{position:absolute;right:70px;top:50%;transform:translateY(-50%);font-size:220px;opacity:.12;line-height:1}
-  .url{position:absolute;right:90px;bottom:26px;font-family:var(--mono);font-size:20px;font-weight:700;color:var(--brass)}
+  body{margin:0;background:#3a3a3a;color:#eee;font-family:system-ui,Segoe UI,sans-serif;text-align:center;padding:24px}
+  h2{font-weight:600;margin:0 0 6px}
+  p{color:#bbb;margin:0 0 16px;font-size:14px}
+  canvas{max-width:100%;height:auto;border:1px solid #555;box-shadow:0 6px 24px rgba(0,0,0,.4)}
+  button{margin-top:18px;font-size:16px;font-weight:700;padding:12px 26px;border:none;border-radius:8px;
+    background:#2C6E5A;color:#fff;cursor:pointer}
+  button:hover{background:#37866e}
+  .steps{max-width:640px;margin:18px auto 0;text-align:left;color:#ccc;font-size:14px;line-height:1.6}
+  code{background:#222;padding:1px 6px;border-radius:4px}
 </style>
 </head>
 <body>
-  <div class="hint">Обложка ВК (1590×400). Открой на весь экран (F11), сделай скриншот прямоугольника
-    и загрузи в ВК: Сообщество → Управление → «Загрузить обложку». Этот блок в кадр не бери.</div>
-  <div class="cover">
-    <div class="fish">🎣</div>
-    <div class="brand">Прогноз клёва · дневник · карта</div>
-    <h1>На крючке</h1>
-    <div class="sub">знай, когда клюёт</div>
-    <div class="tag">Честный прогноз по водоёмам Башкирии · бесплатно · без рекламы</div>
-    <div class="url">kressent.github.io/zorka</div>
-    <svg class="wave" viewBox="0 0 1590 70" preserveAspectRatio="none" aria-hidden="true">
-      <path d="M0,40 C260,10 400,66 640,40 C880,14 1040,66 1280,38 C1420,22 1520,52 1590,36 L1590,70 L0,70 Z" fill="currentColor"/>
-    </svg>
+  <h2>Обложка ВК-группы «На крючке»</h2>
+  <p>1590×400 — ровно как надо ВКонтакте.</p>
+  <canvas id="c" width="1590" height="400"></canvas>
+  <div><button id="dl">⬇️ Скачать обложку (PNG)</button></div>
+  <div class="steps">
+    <b>Что делать:</b><br>
+    1. Нажми кнопку — скачается файл <code>vk-cover.png</code>.<br>
+    2. В ВК: Сообщество → <b>Управление</b> → <b>«Загрузить обложку»</b> → выбери этот файл.<br>
+    Готово.
   </div>
+
+<script>
+const SERIF='Georgia,"Times New Roman",serif', MONO='ui-monospace,Menlo,monospace';
+const PAPER='#EFE9DB', INK='#10322D', JADE='#2C6E5A', BRASS='#C58A2E', SLATE='#5C6E64';
+const c=document.getElementById('c'), g=c.getContext('2d'), W=1590, H=400;
+
+function draw(){
+  // фон бумага
+  g.fillStyle=PAPER; g.fillRect(0,0,W,H);
+  // водное свечение справа-сверху
+  const rg=g.createRadialGradient(W*0.80,-40,60, W*0.80,-40,720);
+  rg.addColorStop(0,'rgba(44,110,90,0.22)'); rg.addColorStop(1,'rgba(44,110,90,0)');
+  g.fillStyle=rg; g.fillRect(0,0,W,H);
+  // крупная рыба-водяной знак
+  g.textAlign='center'; g.textBaseline='middle';
+  g.globalAlpha=0.12; g.font='210px '+SERIF; g.fillText('🎣', W-190, H/2-10); g.globalAlpha=1;
+  // тексты слева
+  g.textAlign='left'; g.textBaseline='alphabetic';
+  try{g.letterSpacing='5px';}catch(e){}
+  g.fillStyle=BRASS; g.font='700 17px '+MONO; g.fillText('ПРОГНОЗ КЛЁВА · ДНЕВНИК · КАРТА', 90, 120);
+  try{g.letterSpacing='0px';}catch(e){}
+  g.fillStyle=INK; g.font='700 104px '+SERIF; g.fillText('На крючке', 86, 218);
+  g.fillStyle=SLATE; g.font='italic 30px '+SERIF; g.fillText('знай, когда клюёт', 92, 262);
+  g.fillStyle=JADE; g.font='18px '+MONO; g.fillText('Честный прогноз по водоёмам Башкирии · бесплатно · без рекламы', 92, 300);
+  // ссылка справа снизу
+  g.textAlign='right'; g.fillStyle=BRASS; g.font='700 20px '+MONO; g.fillText('kressent.github.io/zorka', W-70, H-30);
+  // волна снизу
+  g.fillStyle='rgba(44,110,90,0.5)';
+  g.beginPath(); g.moveTo(0,H-30);
+  g.bezierCurveTo(260,H-60,400,H-4,640,H-30);
+  g.bezierCurveTo(880,H-56,1040,H-4,1280,H-32);
+  g.bezierCurveTo(1420,H-48,1520,H-18,W,H-34);
+  g.lineTo(W,H); g.lineTo(0,H); g.closePath(); g.fill();
+}
+// перерисуем ещё раз после подгрузки шрифтов (Georgia системный — обычно сразу)
+draw(); if(document.fonts&&document.fonts.ready) document.fonts.ready.then(draw);
+
+document.getElementById('dl').onclick=()=>{
+  c.toBlob(b=>{ const a=document.createElement('a'); a.href=URL.createObjectURL(b);
+    a.download='vk-cover.png'; a.click(); setTimeout(()=>URL.revokeObjectURL(a.href),4000); },'image/png');
+};
+</script>
 </body>
 </html>
