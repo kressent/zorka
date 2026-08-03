@@ -28,6 +28,7 @@ import { refWaters, refWhere, inRefRegion } from './waterref.js';
 import { suggestSpecies } from './suggest.js';
 import { personalRecords, fishingYear } from './records.js';
 import { forecastAccuracy } from './forecastAccuracy.js';
+import { getPhoto, setPhoto, delPhoto, compressImage } from './photos.js';
 import { achievements } from './achievements.js';
 import { forecastPost } from './postgen.js';
 import { cloudEnabled, CONFIG } from './config.js';
@@ -260,6 +261,7 @@ function renderDiary(){
       ${(e.spot||e.forecast)?`<div class="em">${e.spot?`<span class="mchip">${esc(e.spot)}</span>`:''}${e.forecast?`${e.forecast.score!=null?`<span class="mchip">🔮 ${Number(e.forecast.score).toFixed(1)}/5</span>`:''}<span class="mchip">${e.forecast.avgP||''} мм</span><span class="mchip">${e.forecast.maxT}°</span>`:''}</div>`:''}
       ${cnt?`<div class="catchlist">${catches}<div class="cl tot"><span class="cn">Итого · ${cnt} ${cnt===1?'рыба':'рыб'}</span><span class="cw">${w?fmtW(w):'—'}</span></div></div>`
            :(e.visited?`<div style="font-size:12.5px;color:var(--slate);margin-top:8px">Был на рыбалке, без улова</div>`:'')}
+      ${getPhoto(e.id)?`<img class="entry-photo" src="${getPhoto(e.id)}" alt="фото улова" loading="lazy">`:''}
       ${e.groundbait?`<div class="en" style="font-style:normal;color:var(--slate)">🥣 Прикормка: ${esc(e.groundbait)}</div>`:''}
       ${e.note?`<div class="en">«${esc(e.note)}»</div>`:''}
       <div style="display:flex;gap:8px;margin-top:11px">
@@ -1145,7 +1147,23 @@ function newEntry(dateStr){
   if(!draft.catches) draft.catches=[];
   renderEntry();
 }
-function editEntry(id){ const e=Diary.getEntries().find(x=>x.id===id); if(e){ draft=JSON.parse(JSON.stringify(e)); renderEntry(); } }
+function editEntry(id){ const e=Diary.getEntries().find(x=>x.id===id); if(e){ draft=JSON.parse(JSON.stringify(e)); draft._photo=getPhoto(id)||undefined; renderEntry(); } }
+// фото улова: выбрать/сжать/показать/удалить (хранится локально, в облако не уходит)
+function entryPhoto(){
+  const inp=document.createElement('input'); inp.type='file'; inp.accept='image/*'; inp.capture='environment';
+  inp.onchange=async()=>{ const f=inp.files&&inp.files[0]; if(!f) return;
+    try{ toast('Обрабатываю фото…'); draft._photo=await compressImage(f); renderEntry(); }
+    catch(e){ toast('Не удалось загрузить фото'); } };
+  inp.click();
+}
+function rmEntryPhoto(){ draft._photo=null; renderEntry(); }
+function photoHTML(){
+  const p = draft._photo;
+  if(p) return `<div class="field"><label>Фото улова</label>
+    <div class="entry-photo-wrap"><img class="entry-photo" src="${p}" alt="фото улова">
+    <button class="entry-photo-rm" onclick="Z.rmEntryPhoto()">✕ убрать</button></div></div>`;
+  return `<div class="field"><button class="act" style="margin-top:0;padding:9px;border-color:var(--jade);color:var(--jade)" onclick="Z.entryPhoto()">📷 Добавить фото улова</button></div>`;
+}
 // умные подсказки видов для текущей точки/сезона (ловят рядом → регион → сезон)
 function suggestHTML(){
   const lat = draft.lat!=null?draft.lat:(ST.city?ST.city.lat:null);
@@ -1177,6 +1195,7 @@ function renderEntry(){
     <div class="field"><label>Место (по желанию)</label><input id="e_spot" value="${esc(draft.spot||'')}" placeholder="напр. Устье Нугуша"></div>
     <div class="field"><label>Точка на карте (по желанию)</label>
       <button class="act" style="margin-top:0;padding:9px;border-color:var(--jade);color:var(--jade)" onclick="Z.pickEntryLoc()">📍 ${draft.lat!=null?`Точка задана ✓ (${draft.lat.toFixed(3)}, ${draft.lon.toFixed(3)}) — изменить`:'Указать место на карте'}</button></div>
+    ${photoHTML()}
     <div class="field"><label>Что поймал — по каждой рыбе свой вес</label>${suggestHTML()}<div class="fishpick">${picker}</div></div>
     <div id="catchRows">${rows||'<p style="font-size:12px;color:var(--slate);margin:6px 0">Нажми на рыбу выше, чтобы добавить. Вес пустой = «не взвешивал».</p>'}</div>
     <div class="field"><label>Оценка</label><div class="stars" id="stars">${stars}</div></div>
@@ -1256,7 +1275,10 @@ function saveEntry(){
         draft.forecast={maxT:fc.conditions.maxT,minT:fc.conditions.minT,avgP:fc.conditions.avgP,pdir:fc.conditions.pdir,wt:fc.conditions.wt,score:fc.day.score}; } }catch(e){}
   }
   const saved = draft;
-  Diary.upsertEntry(saved); draft=null; invalidateFeed(); closeModal(); rerender(); Sync.pushSoon();
+  const photo = saved._photo; delete saved._photo;      // фото — только локально, не в запись/облако
+  Diary.upsertEntry(saved);
+  try{ if(photo!==undefined){ if(photo) setPhoto(saved.id, photo); else delPhoto(saved.id); } }catch(e){}
+  draft=null; invalidateFeed(); closeModal(); rerender(); Sync.pushSoon();
   try{ if(cloudEnabled()) Cloud.logEvent('save_catch', {fish:(saved.catches||[]).length}); }catch(e){}
   // синхронизируем ленту: приватный улов — убрать из ленты, обычный — опубликовать
   if(cloudEnabled() && Cloud.cachedUser()){
@@ -1270,7 +1292,7 @@ function saveEntry(){
     }
   }
 }
-function delEntry(id){ if(confirm('Удалить запись?')){ Diary.deleteEntry(id);
+function delEntry(id){ if(confirm('Удалить запись?')){ Diary.deleteEntry(id); try{ delPhoto(id); }catch(e){}
   if(cloudEnabled() && Cloud.cachedUser()) Cloud.unpublishEntry(id).catch(e=>console.warn('unpublish:',e));
   draft=null; closeModal(); rerender(); Sync.pushSoon(); } }
 async function shareCatch(id){
@@ -1381,7 +1403,7 @@ export function initUI(){
     like: feedLike, comments: openComments, sendComment, delComment, report: reportTrip, coTrips: openCoTrips, coNew: coTripNew, coSave: coTripSave, coJoin, coDel, feedMode:(m)=>{ feedFilter=m; rerender(); }, feedSp:(s)=>{ feedSpecies=(s&&s!==feedSpecies)?s:null; loadFeed(); }, where: openWhere,
     leaderPeriod:(p)=>{ leaderPeriod=p; const box=$('leadBox'); if(box && _feedCache) box.outerHTML=leaderBoxHTML(_feedCache); },
     waterProfile: openWaterProfile,
-    newEntry, editEntry, addCatch, rmCatch, setW, setLure, lureCustom, setRating, setPrivate, setDate, pickEntryLoc, entryBack, clearEntryLoc, entryLocSearch, entryLocGo, saveEntry, delEntry, shareCatch, openRecords, openYear, shareYear, exportDiary, importDiary,
+    newEntry, editEntry, addCatch, rmCatch, setW, setLure, lureCustom, setRating, setPrivate, setDate, pickEntryLoc, entryBack, clearEntryLoc, entryLocSearch, entryLocGo, entryPhoto, rmEntryPhoto, saveEntry, delEntry, shareCatch, openRecords, openYear, shareYear, exportDiary, importDiary,
     newKit, editKit, kitIcon, kitTarget, addLure, lureQty, rmLure, saveKit, delKit,
     mapView:(v)=>{ ST.mapView=v; MapView.setLayer(v); document.querySelectorAll('.mtoggle button').forEach((b,i)=>b.classList.toggle('on',(i===0)===(v==='satellite'))); },
     mapPick:(la,lo)=>newPlace({lat:la,lon:lo}), newPlace, placeGeo, savePlace, delPlace, mapCatches:(v)=>{ mapShowCatches=!!v; rerender(); },
