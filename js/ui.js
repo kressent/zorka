@@ -217,7 +217,8 @@ function renderForecast(){
         <div class="row"><span class="big">${Math.round(ST.weather.hourly.temperature_2m[idx*24+now.getHours()] ?? c.maxT)}°</span>
           <span class="day">${fc.day.label}<br>${fc.day.score.toFixed(1)} / 5</span></div>
         <div class="sub">${wDesc(c.wcode)} · днём ${c.maxT}°, ночью ${c.minT}° · ${wdName(c.avgWD)} ${c.wind} м/с</div>
-        <div class="sub">🌊 вода ~${c.wt}° · ${fc.water.label} · давление ${c.avgP} мм ${pdirTxt(c.pdir)}</div>
+        <div class="sub">🌊 вода ~${c.wt}° · ${fc.water.label}</div>
+        <div class="sub">🔵 давление ${c.avgP} мм ${pdirTxt(c.pdir)}</div>
         <div class="mood">${comfortMood(c)}</div>
         ${dayFactorsHTML(fc)}
         ${fc.confidence?`<button class="confbadge c-${fc.confidence.level}" onclick="Z.openConfidence()">◐ Уверенность прогноза: ${fc.confidence.label}${fc.confidence.why.length?' ⓘ':''}</button>`:''}</div>
@@ -234,11 +235,15 @@ function renderForecast(){
       <div class="adv">${esc(fc.advice)}</div>
       ${nearbyHTML()}
       ${crowdNoteHTML()}
-      ${(cloudEnabled() && _feedCache && _feedCache.length) ? `<button class="act" style="padding:8px;font-size:12.5px;border-color:var(--jade);color:var(--jade)" onclick="Z.openWaters()">🌊 Все водоёмы (что где ловится) →</button>` : ''}
       ${waterReportHTML()}
-      <div class="lbl" style="margin-top:8px">Прогноз на 2 недели</div>
-      ${(fc.bestDay && fc.bestDay.name!=='Сегодня') ? `<div onclick="Z.openDay('${fc.bestDay.date||''}')" style="cursor:pointer;font-family:var(--font-serif);font-size:13.5px;color:var(--jade);margin:8px 0 2px">🏆 Лучший день — <b>${esc(fc.bestDay.name)}</b> · ${fc.bestDay.score.toFixed(1)}/5 ▸</div>` : `<div style="font-size:12.5px;color:var(--slate);margin:8px 0 2px">🏆 Лучший день — сегодня</div>`}
-      <div class="days">${upHTML}</div>
+      <details class="fc-2w">
+        <summary><span class="lbl" style="margin:0">Прогноз на 2 недели</span>
+          <span class="fc-2w-peak">${(fc.bestDay && fc.bestDay.name!=='Сегодня') ? `🏆 ${esc(fc.bestDay.name)} · ${fc.bestDay.score.toFixed(1)}` : '🏆 сегодня'}</span>
+          <span class="fc-2w-chev">▾</span></summary>
+        ${(fc.bestDay && fc.bestDay.name!=='Сегодня') ? `<div onclick="Z.openDay('${fc.bestDay.date||''}')" style="cursor:pointer;font-family:var(--font-serif);font-size:13.5px;color:var(--jade);margin:8px 0 2px">🏆 Лучший день — <b>${esc(fc.bestDay.name)}</b> · ${fc.bestDay.score.toFixed(1)}/5 ▸</div>` : `<div style="font-size:12.5px;color:var(--slate);margin:8px 0 2px">🏆 Лучший день — сегодня</div>`}
+        <div class="days">${upHTML}</div>
+      </details>
+      ${(cloudEnabled() && _feedCache && _feedCache.length) ? `<button class="act" style="padding:8px;font-size:12.5px;border-color:var(--jade);color:var(--jade)" onclick="Z.openWaters()">🌊 Все водоёмы (что где ловится) →</button>` : ''}
       <button class="act" style="border-color:var(--brass);color:var(--brass)" onclick="Z.openMoon()">🌙 Лунный календарь на 2 недели</button>
       <button class="act" style="border-color:var(--slate);color:var(--slate)" onclick="Z.openRegs()">🎣 Правила: нерест, нормы, размеры</button>
       <button class="act" style="border-color:var(--jade);color:var(--jade)" onclick="Z.shareForecast()">📤 Поделиться прогнозом</button>
