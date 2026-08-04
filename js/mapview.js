@@ -4,7 +4,7 @@
 // ставит точку (можно из дома). Бесплатно, без ключей. Библиотека грузится
 // лениво с CDN (нужна сеть; офлайн карта не работает — остальное приложение да).
 
-let _L = null, _loading = null, _map = null, _base = {}, _spotLayer = null, _pin = null, _catchLayer = null;
+let _L = null, _loading = null, _map = null, _base = {}, _spotLayer = null, _pin = null, _catchLayer = null, _zoneLayer = null;
 
 function loadLeaflet() {
   if (_L) return Promise.resolve(_L);
@@ -86,6 +86,29 @@ export function drawCatches(marks) {
   });
 }
 export function clearCatches() { if (_catchLayer) _catchLayer.clearLayers(); }
+
+// туристические зоны (базы/кемпинги/домики). zones: [{lat, lon, name, kind}]
+export function drawZones(zones) {
+  if (!_map || !_L) return;
+  if (!_zoneLayer) _zoneLayer = _L.layerGroup().addTo(_map);
+  _zoneLayer.clearLayers();
+  const icon = _L.divIcon({ className: 'tz-ic', html: '🏕', iconSize: [20, 20], iconAnchor: [10, 10] });
+  (zones || []).forEach(z => {
+    if (z.lat == null || z.lon == null) return;
+    _L.marker([z.lat, z.lon], { icon })
+      .addTo(_zoneLayer)
+      .bindPopup('🏕 <b>' + (z.name || 'Турзона') + '</b>' + (z.kind ? '<br>' + z.kind : '')
+        + (z.url ? '<br><a href="' + z.url + '" target="_blank" rel="noopener">забронировать →</a>' : ''));
+  });
+  return _zoneLayer.getLayers().length;
+}
+export function clearZones() { if (_zoneLayer) _zoneLayer.clearLayers(); }
+// bbox текущего вида карты [south, west, north, east] — для выгрузки OSM
+export function mapBounds() {
+  if (!_map) return null;
+  try { const b = _map.getBounds(); return [b.getSouth(), b.getWest(), b.getNorth(), b.getEast()]; }
+  catch (e) { return null; }
+}
 
 // отдельная карта-пикер (для модалки выбора места) — НЕ трогает основную _map
 let _pmap = null, _pbase = {};

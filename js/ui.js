@@ -26,6 +26,7 @@ import { clusterWaters, waterProfile } from './waterbodies.js';
 import { nearbySignal, calibrate } from './calibrate.js';
 import { learnSignal, blendForecast, learnWeight } from './learn.js';
 import { refWaters, refWhere, inRefRegion } from './waterref.js';
+import { seedCrowdNote, fetchZones } from './touristzones.js';
 import { suggestSpecies } from './suggest.js';
 import { personalRecords, fishingYear } from './records.js';
 import { forecastAccuracy } from './forecastAccuracy.js';
@@ -232,6 +233,7 @@ function renderForecast(){
       ${fishHTML || '<p style="color:var(--slate);font-size:13px;margin-top:10px">Нет выбранных видов.</p>'}
       <div class="adv">${esc(fc.advice)}</div>
       ${nearbyHTML()}
+      ${crowdNoteHTML()}
       ${(cloudEnabled() && _feedCache && _feedCache.length) ? `<button class="act" style="padding:8px;font-size:12.5px;border-color:var(--jade);color:var(--jade)" onclick="Z.openWaters()">🌊 Все водоёмы (что где ловится) →</button>` : ''}
       ${waterReportHTML()}
       <div class="lbl" style="margin-top:8px">Прогноз на 2 недели</div>
@@ -304,7 +306,7 @@ function schemeSVG(){
     <path d="M-10,46 C60,66 90,26 150,60 C210,94 240,64 330,98 L330,152 C240,122 210,152 150,114 C90,78 60,118 -10,98 Z" fill="#bcd6cb" fill-opacity="0.7" stroke="#2C6E5A" stroke-opacity=".5"/>
     <path d="M150,60 C150,112 120,152 90,190" fill="none" stroke="#2C6E5A" stroke-opacity=".4" stroke-width="9"/></svg>`;
 }
-let mapShowCatches=true;
+let mapShowCatches=true, mapShowZones=false;
 function renderMap(){
   const places = getPlaces();
   const center = ST.city ? {lat:ST.city.lat, lon:ST.city.lon} : {lat:55.75, lon:37.62};
@@ -319,14 +321,22 @@ function renderMap(){
         const sl=$('spotsList'); if(sl) sl.innerHTML=spotsHTML(getPlaces()); // обогатить «рядом ловят»
       }catch(e){}
     }
+    if(mapShowZones) loadZones();
   }, 30);
   return `<div class="pad"><div class="mast"><span class="t">Мои места</span><span class="d">${places.length} точек</span></div>
     <div class="mtoggle"><button class="${ST.mapView==='satellite'?'on':''}" onclick="Z.mapView('satellite')">Спутник</button><button class="${ST.mapView!=='satellite'?'on':''}" onclick="Z.mapView('scheme')">Схема</button></div>
     <div id="mapEl" style="height:300px;margin-top:8px;border:1px solid var(--rule);background:#dfe6e0;z-index:0"></div>
     ${cloudEnabled()?`<label class="pub-toggle" style="margin:8px 0 0"><input type="checkbox" ${mapShowCatches?'checked':''} onchange="Z.mapCatches(this.checked)"><span>🎣 Показывать уловы рыбаков на карте</span></label>`:''}
+    <label class="pub-toggle" style="margin:6px 0 0"><input type="checkbox" ${mapShowZones?'checked':''} onchange="Z.mapZones(this.checked)"><span>🏕 Базы отдыха и кемпинги (где людно)</span></label>
     <p style="font-size:11.5px;color:var(--slate);margin-top:6px">📍 Нажми на карту, чтобы поставить метку места — хоть из дома.</p>
     <div id="spotsList">${spotsHTML(places)}</div>
     <button class="act" onclick="Z.newPlace()">＋ Добавить по геолокации</button><div style="height:10px"></div></div>`;
+}
+// подгрузить турзоны (OSM + сид) по текущему виду карты и нарисовать слой
+async function loadZones(){
+  const bbox = MapView.mapBounds(); if(!bbox) return;
+  try{ const zones = await fetchZones(bbox); if(mapShowZones) MapView.drawZones(zones); }
+  catch(e){}
 }
 function spotsHTML(places){
   if(!places.length) return `<div class="empty"><div class="ei">📍</div><p>Пока нет отмеченных мест. Нажми на карту выше, чтобы поставить точку (можно из дома), или кнопку ниже.</p></div>`;
@@ -410,6 +420,12 @@ function nearbyHTML(){
   const rows = list.map(x=>{ const f=byId(x.species); const nm=f?f.n:esc(x.species); const col=f?f.col:'#7c8a80';
     return `<div class="nb-row" onclick="Z.where('${x.species}')" style="cursor:pointer"><span class="dot" style="background:${col}"></span><b class="nb-n">${nm}</b><span class="nb-c">${x.count} ${x.count===1?'улов':(x.count<5?'улова':'уловов')}</span>${x.topLure?`<span class="nb-lr">на ${esc(x.topLure)}</span>`:''}<span class="chev">▸</span></div>`; }).join('');
   return `<div class="lbl" style="margin-top:16px">🎣 Здесь реально ловят <span class="lbl-sub">(тапни вид → где его ловят)</span></div><div class="nb-list">${rows}</div>`;
+}
+// строка «людно»: рядом базы отдыха/кемпинги (из сида, синхронно, офлайн)
+function crowdNoteHTML(){
+  if(!ST.city) return '';
+  const note = seedCrowdNote(ST.city.lat, ST.city.lon);
+  return note ? `<div class="crowd-note">${esc(note)}</div>` : '';
 }
 
 function openWaters(){
@@ -1459,6 +1475,7 @@ export function initUI(){
     newKit, editKit, kitIcon, kitTarget, addLure, lureQty, rmLure, saveKit, delKit,
     mapView:(v)=>{ ST.mapView=v; MapView.setLayer(v); document.querySelectorAll('.mtoggle button').forEach((b,i)=>b.classList.toggle('on',(i===0)===(v==='satellite'))); },
     mapPick:(la,lo)=>newPlace({lat:la,lon:lo}), newPlace, placeGeo, savePlace, delPlace, mapCatches:(v)=>{ mapShowCatches=!!v; rerender(); },
+    mapZones:(v)=>{ mapShowZones=!!v; if(v) loadZones(); else MapView.clearZones(); },
     pickerLayer:(w)=>{ MapView.setPickerLayer(w); document.querySelectorAll('.pk-toggle button').forEach((b,i)=>b.classList.toggle('on',(i===0)===(w==='satellite'))); },
   };
 }
