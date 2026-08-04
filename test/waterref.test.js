@@ -14,9 +14,11 @@ check('все виды справочника есть в базе data.js', () 
     assert.ok(byId(s), 'нет вида: ' + s + ' (' + w.name + ')');
 });
 
-check('inRefRegion — Салават внутри, Москва снаружи', () => {
+check('inRefRegion — Салават/Уфа внутри, Москва/Оренбург снаружи', () => {
   assert.equal(inRefRegion(53.36, 55.92), true);   // Салават
+  assert.equal(inRefRegion(54.74, 55.96), true);   // Уфа
   assert.equal(inRefRegion(55.75, 37.62), false);  // Москва
+  assert.equal(inRefRegion(51.77, 55.10), false);  // Оренбург — был в старой рамке, теперь далеко
   assert.equal(inRefRegion(null, null), false);
 });
 

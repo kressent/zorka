@@ -17,7 +17,9 @@ export function entryByDate(date) { return getEntries().find(e => e.date === dat
 // entry: {date, spot, visited, catches:[{species, weight|null}], note, rating, forecast}
 export function upsertEntry(entry) {
   const list = getEntries();
-  const i = list.findIndex(e => e.id === entry.id || (entry.date && e.date === entry.date));
+  // матч ТОЛЬКО по id: новая запись (без id) всегда создаётся отдельной, даже если
+  // на эту дату уже есть рыбалка (утренняя/вечерняя зорька, два водоёма — разные выезды).
+  const i = entry.id ? list.findIndex(e => e.id === entry.id) : -1;
   let saved;
   if (i >= 0) { saved = { ...list[i], ...entry, id: list[i].id }; list[i] = saved; }
   else { saved = { id: uid(), ...entry }; list.unshift(saved); }

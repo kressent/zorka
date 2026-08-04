@@ -218,6 +218,8 @@ button{font-family:inherit}
 .fishpick{display:flex;flex-wrap:wrap;gap:6px;margin-top:4px}
 .fishpick button{background:var(--card);border:1px solid var(--line);color:var(--slate);font:inherit;font-size:12.5px;padding:6px 10px;cursor:pointer;display:flex;align-items:center;gap:6px}
 .fishpick button.on{border-color:var(--jade);color:var(--ink);background:rgba(44,110,90,.08)}
+.fishpick button.picked{border:2px solid var(--jade);color:var(--ink);background:rgba(44,110,90,.12);padding:5px 9px;font-weight:600}
+.fishpick .pk-n{font-family:var(--font-mono);font-size:10.5px;font-weight:700;color:#fff;background:var(--jade);border-radius:99px;min-width:15px;height:15px;display:inline-flex;align-items:center;justify-content:center;padding:0 3px}
 .fishpick .fd{width:7px;height:7px;border-radius:50%}
 .sug-row{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin:2px 0 8px}
 .sug-lbl{font-family:var(--font-mono);font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--jade);width:100%}

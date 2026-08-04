@@ -1208,10 +1208,10 @@ async function cityPick(lat,lon){
 // дневник — запись
 let draft = null;
 function newEntry(dateStr){
+  // «Записать рыбалку» = всегда чистый лист (не подтягиваем сегодняшнюю запись —
+  // это путало: казалось, что стоят данные прошлой рыбалки). Прошлые правим из списка.
   const date = dateStr || new Date().toISOString().slice(0,10);
-  const ex = Diary.entryByDate(date);
-  draft = ex ? JSON.parse(JSON.stringify(ex)) : { date, visited:true, catches:[], note:'', rating:0, spot:'' };
-  if(!draft.catches) draft.catches=[];
+  draft = { date, visited:true, catches:[], note:'', rating:0, spot:'' };
   renderEntry();
 }
 function editEntry(id){ const e=Diary.getEntries().find(x=>x.id===id); if(e){ draft=JSON.parse(JSON.stringify(e)); draft._photo=getPhoto(id)||undefined; renderEntry(); } }
@@ -1247,7 +1247,9 @@ function suggestHTML(){
 }
 function renderEntry(){
   const d=new Date(draft.date+'T12:00:00');
-  const picker = SPECIES.map(f=>`<button onclick="Z.addCatch('${f.id}')"><span class="fd" style="background:${f.col}"></span>${f.n}</button>`).join('');
+  const pc={}; (draft.catches||[]).forEach(c=>pc[c.species]=(pc[c.species]||0)+1);
+  const picker = SPECIES.map(f=>{ const n=pc[f.id]||0;
+    return `<button class="${n?'picked':''}" onclick="Z.addCatch('${f.id}')"><span class="fd" style="background:${f.col}"></span>${f.n}${n?`<b class="pk-n">${n>1?n:'✓'}</b>`:''}</button>`; }).join('');
   const rows = draft.catches.map((c,i)=>{ const f=byId(c.species);
     const cands = lureCandidates(c.species);
     const chips = cands.map(l=>`<button class="lure-chip${c.lure===l?' on':''}" onclick="Z.setLure(${i},'${escJs(l)}')">${esc(l)}</button>`).join('');
@@ -1324,11 +1326,9 @@ function entryLocGo(lat,lon){
   const b=$('entrySearchRes'); if(b) b.innerHTML=''; const inp=$('entrySearch'); if(inp) inp.value='';
 }
 function setDate(v){
+  // несколько выездов в одну дату теперь допустимы (см. upsertEntry) — просто ставим дату
   if(!v || !draft) return; syncEntryFields();
-  const ex = Diary.entryByDate(v);
-  if(ex && ex.id!==draft.id){
-    if(confirm('На эту дату уже есть запись — открыть её?')) draft = JSON.parse(JSON.stringify(ex)); else return;
-  } else { draft.date = v; }
+  draft.date = v;
   renderEntry();
 }
 function syncEntryFields(){ const s=$('e_spot'),n=$('e_note'),p=$('e_private'),g=$('e_groundbait'); if(s)draft.spot=s.value; if(n)draft.note=n.value; if(p)draft.private=p.checked; if(g)draft.groundbait=g.value; }
