@@ -61,7 +61,7 @@ button{font-family:inherit}
 .today .row{display:flex;align-items:baseline;gap:12px}
 .today .big{font-family:var(--font-serif);font-size:46px;font-weight:400;line-height:1;margin:4px 0 0}
 .today .day{font-family:var(--font-serif);font-size:16px;font-weight:700;margin-left:auto;color:var(--jade);text-align:right}
-.today .sub{font-size:12px;color:var(--slate);margin-top:3px}
+.today .sub{font-size:12.5px;color:var(--slate);margin-top:4px}
 .today .mood{font-family:var(--font-serif);font-style:italic;font-size:14.5px;margin-top:11px;line-height:1.45}
 
 /* сегменты-фильтр */
@@ -93,7 +93,7 @@ button{font-family:inherit}
 .fr{display:flex;align-items:center;gap:10px;padding:11px 0;border-top:1px solid var(--line);cursor:pointer}
 .fr .fn{flex:1;min-width:0}
 .fr .fn b{font-family:var(--font-serif);font-size:15.5px;font-weight:600;display:block}
-.fr .fn span{display:block;font-size:11px;color:var(--slate);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fr .fn span{display:block;font-size:11.5px;color:var(--slate);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .fr .chev{color:var(--slate);font-size:11px;transition:transform .2s}
 .fr.open .chev{transform:rotate(180deg)}
 .fbody{display:none;padding:2px 0 12px;border-top:1px dotted var(--line)}
@@ -342,7 +342,7 @@ button{font-family:inherit}
 :root{--brass-soft:#f4ead6}
 
 /* honesty-строка */
-.honesty{font-size:11.5px;color:var(--slate);line-height:1.45;margin-top:16px;padding-top:12px;border-top:1px solid var(--line);font-family:var(--font-serif);font-style:italic}
+.honesty{font-size:12px;color:var(--slate);line-height:1.5;margin-top:16px;padding-top:12px;border-top:1px solid var(--line);font-family:var(--font-serif);font-style:italic}
 
 /* тост */
 .toast{position:fixed;left:50%;bottom:96px;transform:translate(-50%,20px);z-index:30;
