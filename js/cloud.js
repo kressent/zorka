@@ -91,6 +91,31 @@ export async function setPassword(password) {
   if (error) throw error;
 }
 
+// восстановление пароля: письмо со ссылкой (клик → возврат в приложение в режиме
+// recovery → задаём новый пароль через setPassword). Зависит от доставки почты Supabase.
+export async function resetPassword(email) {
+  const c = await client(); if (!c) throw new Error('Облако не настроено');
+  const redirect = (typeof window !== 'undefined' && window.location)
+    ? (window.location.origin + window.location.pathname) : undefined;
+  const { error } = await c.auth.resetPasswordForEmail(String(email).trim(), { redirectTo: redirect });
+  if (error) throw error;
+}
+
+// смена почты аккаунта: Supabase шлёт подтверждение на новую (и старую) почту;
+// пока не подтвердят — почта в базе не меняется. Тоже зависит от доставки писем.
+export async function changeEmail(email) {
+  const c = await client(); if (!c) throw new Error('Облако не настроено');
+  const { error } = await c.auth.updateUser({ email: String(email).trim() });
+  if (error) throw error;
+}
+
+// вернулись ли по ссылке восстановления пароля (в URL — type=recovery)
+export function isRecoveryReturn() {
+  if (typeof window === 'undefined' || !window.location) return false;
+  const h = String(window.location.hash || '') + ' ' + String(window.location.search || '');
+  return h.includes('type=recovery');
+}
+
 // ── синхронизация данных (дневник/места/снасти одним документом) ──
 export async function pullData() {
   const c = await client(); if (!c) return null;

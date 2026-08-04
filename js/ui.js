@@ -1026,6 +1026,7 @@ async function openAccount(){
   if(user){
     await Cloud.ensureProfile().catch(()=>{});
     const st = await Cloud.myStats().catch(()=>null);
+    const ds = Diary.stats(); // счётчики уловов — из локального дневника (источник правды, видно сразу)
     const handle = (st&&st.handle)||'';
     const pts = (st&&st.points)||0;
     const rk = anglerRank(pts);
@@ -1040,9 +1041,9 @@ async function openAccount(){
       </div>
       <p class="prof-hint">Очки уважения растут от лайков других рыбаков и медленно тускнеют без рыбалки. Накрутить количеством рыбы нельзя.</p>
       <div class="prof-stats prof-stats-3">
-        <div><b>${st?st.catches||0:0}</b><span>уловов</span></div>
-        <div><b>${st?st.species||0:0}</b><span>видов</span></div>
-        <div><b>${st?st.days||0:0}</b><span>дней</span></div>
+        <div><b>${ds.fishCount||0}</b><span>уловов</span></div>
+        <div><b>${ds.species||0}</b><span>видов</span></div>
+        <div><b>${ds.days||0}</b><span>дней</span></div>
       </div>
       <div class="field" style="margin-top:14px"><label>Ник в ленте — как тебя видят другие рыбаки</label>
         <input id="ac_handle" maxlength="24" value="${esc(handle)}" placeholder="напр. Щукарь52"></div>
@@ -1056,6 +1057,9 @@ async function openAccount(){
         <div class="field" style="margin-top:10px"><label>Сменить пароль (для входа на других устройствах)</label>
           <input id="ac_setpass" type="password" autocomplete="new-password" placeholder="новый пароль, минимум 6"></div>
         <button class="act" onclick="Z.setPass()">Сохранить пароль</button>
+        <div class="field" style="margin-top:12px"><label>Сменить почту (придёт подтверждение на новую)</label>
+          <input id="ac_newemail" type="email" inputmode="email" autocomplete="email" placeholder="новая почта"></div>
+        <button class="act" onclick="Z.changeEmail()">Сменить почту</button>
         ${Cloud.pushConfigured()?`<button class="act" style="border-color:var(--jade);color:var(--jade);margin-top:12px" onclick="Z.enablePush()">🔔 Пуш-уведомления на телефон</button>`:''}
         <button class="act" style="border-color:var(--jade);color:var(--jade);margin-top:12px" onclick="Z.syncNow()">🔄 Синхронизировать сейчас</button>
         <button class="act" style="border-color:var(--bad);color:var(--bad);margin-top:10px" onclick="Z.signOut()">Выйти</button>
@@ -1070,6 +1074,7 @@ function accountEmailStep(){
     <div class="field"><label>Почта</label><input id="ac_email" type="email" inputmode="email" autocomplete="email" placeholder="you@mail.ru" value="${esc(authEmail)}"></div>
     <div class="field"><label>Пароль</label><input id="ac_pass" type="password" autocomplete="current-password" placeholder="минимум 6 символов"></div>
     <button class="act" onclick="Z.signIn()">Войти</button>
+    <button class="linklike" onclick="Z.forgotPass()">Забыл пароль?</button>
     <button class="act" style="border-color:var(--brass);color:var(--brass);margin-top:10px" onclick="Z.install()">📲 Установить на телефон</button>
     <button class="act" style="border-color:var(--slate);color:var(--slate);margin-top:10px" onclick="Z.feedback()">💬 Написать разработчику</button>`;
 }
@@ -1096,6 +1101,27 @@ async function acSetPass(){
   const btn=document.querySelector('#modal .act'); if(btn) btn.textContent='Сохраняю…';
   try{ await Cloud.setPassword(pw); closeModal(); toast('Пароль сохранён — входи им на других устройствах'); }
   catch(e){ alert('Не удалось: '+(e.message||e)); if(btn) btn.textContent='Сохранить пароль'; }
+}
+async function acForgotPass(){
+  const em=$('ac_email'); let email = em?em.value.trim():'';
+  if(!email){ email = (prompt('На какую почту отправить ссылку для сброса пароля?')||'').trim(); }
+  if(!email || !email.includes('@')){ alert('Введи корректную почту'); return; }
+  try{ await Cloud.resetPassword(email); alert('Письмо со ссылкой отправлено на '+email+'.\n\nОткрой его (проверь и папку «Спам») и перейди по ссылке — вернёшься сюда и задашь новый пароль.\n\nЕсли письмо не пришло за пару минут — напиши разработчику.'); }
+  catch(e){ alert('Не удалось отправить: '+errMsg(e)); }
+}
+async function acChangeEmail(){
+  const el=$('ac_newemail'); if(!el) return; const email=el.value.trim();
+  if(!email || !email.includes('@')){ alert('Введи корректную новую почту'); return; }
+  const btn=el.parentElement&&el.parentElement.nextElementSibling; if(btn) btn.textContent='Отправляю…';
+  try{ await Cloud.changeEmail(email); closeModal(); toast('Подтверждение отправлено на новую почту 📧'); }
+  catch(e){ alert('Не удалось: '+errMsg(e)); if(btn) btn.textContent='Сменить почту'; }
+}
+// возврат по ссылке восстановления пароля → сразу дать задать новый
+function passwordRecoveryModal(){
+  openModal(`<button class="close" onclick="Z.closeModal()">✕</button><h3>Новый пароль</h3>
+    <p style="font-size:12.5px;color:var(--slate);margin:2px 0 10px">Ты перешёл по ссылке восстановления. Задай новый пароль для входа.</p>
+    <div class="field"><label>Новый пароль</label><input id="ac_setpass" type="password" autocomplete="new-password" placeholder="минимум 6 символов"></div>
+    <button class="act" onclick="Z.setPass()">Сохранить пароль</button>`);
 }
 async function acSignOut(){ await Cloud.signOut(); closeModal(); toast('Вышли из облака'); rerender(); }
 async function acSyncNow(){
@@ -1445,9 +1471,15 @@ export function initUI(){
   if (cloudEnabled()) setTimeout(loadLureStats, 600);
   if (cloudEnabled() && Cloud.cachedUser()) Cloud.subscribeCommunity(onCommunityChange).catch(()=>{});
   // возврат по ссылке из письма: supabase кладёт токен в hash — примем сессию
+  const _recovery = cloudEnabled() && Cloud.isRecoveryReturn();
   if (cloudEnabled() && window.location && /access_token|error_code/.test(window.location.hash || '')) {
     Cloud.currentUser().then(u => {
-      if (u) { try { history.replaceState(null, '', window.location.pathname); } catch(e){} toast('Вход выполнен — облако подключено ☁️'); rerender(); }
+      if (u) {
+        try { history.replaceState(null, '', window.location.pathname); } catch(e){}
+        rerender();
+        if (_recovery) { setTimeout(passwordRecoveryModal, 400); }   // ссылка сброса → задать новый пароль
+        else toast('Вход выполнен — облако подключено ☁️');
+      }
     }).catch(()=>{});
   }
   // deep-link из пуш-уведомления: ?c=<tripKey> → открыть комментарии выезда
@@ -1467,7 +1499,7 @@ export function initUI(){
     filter:(f)=>{ ST.filter=f; saveSettings(); rerender(); },
     tf:(el)=>el.classList.toggle('open'),
     openCity, searchCity, pickCity, cityPick, geo, closeModal, openNotif, shareForecast, onboardDone, openMoon, openDay, openConfidence, openRegs, reportWater, clearNotifs, notifOpen, openWaters,
-    openAccount, signIn: acSignIn, setPass: acSetPass, signOut: acSignOut, syncNow: acSyncNow, saveHandle: acSaveHandle, enablePush: acEnablePush, pushAllow, pushLater, install: promptInstall, invite:()=>{ try{ Cloud.logEvent('invite'); }catch(e){} inviteFriend(); }, tg:()=>{ try{ Cloud.logEvent('tg_click'); window.open('https://t.me/nakryuchke_rb','_blank','noopener'); }catch(e){} }, feedback: openFeedback, feedbackSend,
+    openAccount, signIn: acSignIn, setPass: acSetPass, forgotPass: acForgotPass, changeEmail: acChangeEmail, signOut: acSignOut, syncNow: acSyncNow, saveHandle: acSaveHandle, enablePush: acEnablePush, pushAllow, pushLater, install: promptInstall, invite:()=>{ try{ Cloud.logEvent('invite'); }catch(e){} inviteFriend(); }, tg:()=>{ try{ Cloud.logEvent('tg_click'); window.open('https://t.me/nakryuchke_rb','_blank','noopener'); }catch(e){} }, feedback: openFeedback, feedbackSend,
     like: feedLike, comments: openComments, sendComment, delComment, report: reportTrip, photoView, coTrips: openCoTrips, coNew: coTripNew, coSave: coTripSave, coJoin, coDel, feedMode:(m)=>{ feedFilter=m; rerender(); }, feedSp:(s)=>{ feedSpecies=(s&&s!==feedSpecies)?s:null; loadFeed(); }, where: openWhere,
     leaderPeriod:(p)=>{ leaderPeriod=p; const box=$('leadBox'); if(box && _feedCache) box.outerHTML=leaderBoxHTML(_feedCache); },
     waterProfile: openWaterProfile,

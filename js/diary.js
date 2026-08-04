@@ -57,10 +57,13 @@ export function stats() {
     if (e.visited && e.rating) { ratingSum += e.rating; ratingN++; }
   }
   const topSpecies = Object.entries(bySpecies).sort((a, b) => b[1] - a[1]).slice(0, 5);
+  const days = new Set(trips.map(e => e.date)).size; // разных дней на воде (не путать с числом выездов)
   return {
     trips: trips.length,
     withCatch: withCatch.length,
     fishCount,
+    species: Object.keys(bySpecies).length, // сколько разных видов поймано
+    days,
     totalG,
     totalKg: Math.round(totalG / 100) / 10, // для показа в кг
     avgRating: ratingN ? Math.round(ratingSum / ratingN * 10) / 10 : null,

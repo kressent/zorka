@@ -294,6 +294,7 @@ button{font-family:inherit}
 .wr-meta{font-size:12px;color:var(--slate);margin-top:2px}
 .sp-catch{font-size:11.5px;color:var(--jade);margin-top:3px}
 .crowd-note{font-size:12.5px;color:var(--brass);background:rgba(197,138,46,.08);border-left:2px solid var(--brass);padding:7px 9px;margin:12px 0 0;line-height:1.4}
+.linklike{display:block;margin:8px auto 0;background:none;border:none;color:var(--jade);font:inherit;font-size:12.5px;text-decoration:underline;cursor:pointer;padding:4px}
 .tz-ic{font-size:16px;line-height:20px;text-align:center;filter:drop-shadow(0 1px 1px rgba(0,0,0,.4))}
 .cl-lure{color:var(--jade);font-size:12px;font-family:var(--font-mono)}
 .tg.real{border-color:var(--brass);color:var(--brass)}
